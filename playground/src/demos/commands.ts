@@ -54,49 +54,28 @@ export function setup() {
     }
   }
 
-  // ── Subscribe to all commands ──
-  bus.commands$.subscribe((envelope) => {
-    appendLogEntry(
-      String(envelope.type),
-      envelope.payload,
-      "commands$"
-    );
-  });
-
-  // ── Individual ofType subscriptions ──
+  // ── ofType subscriptions — controlled by filter checkboxes ──
   bus.ofType("userLoggedIn").subscribe((envelope) => {
     if (activeFilters.has("userLoggedIn")) {
-      appendLogEntry(
-        "userLoggedIn",
-        envelope.payload,
-        "ofType filter"
-      );
+      appendLogEntry("userLoggedIn", envelope.payload, "ofType");
     }
   });
 
   bus.ofType("itemAdded").subscribe((envelope) => {
     if (activeFilters.has("itemAdded")) {
-      appendLogEntry("itemAdded", envelope.payload, "ofType filter");
+      appendLogEntry("itemAdded", envelope.payload, "ofType");
     }
   });
 
   bus.ofType("itemRemoved").subscribe((envelope) => {
     if (activeFilters.has("itemRemoved")) {
-      appendLogEntry(
-        "itemRemoved",
-        envelope.payload,
-        "ofType filter"
-      );
+      appendLogEntry("itemRemoved", envelope.payload, "ofType");
     }
   });
 
   bus.ofType("themeChanged").subscribe((envelope) => {
     if (activeFilters.has("themeChanged")) {
-      appendLogEntry(
-        "themeChanged",
-        envelope.payload,
-        "ofType filter"
-      );
+      appendLogEntry("themeChanged", envelope.payload, "ofType");
     }
   });
 
