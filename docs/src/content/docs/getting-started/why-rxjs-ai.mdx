@@ -122,7 +122,7 @@ fromEvent(searchInput, 'input').pipe(
   debounceTime(300),
   switchMap((event) => {
     const query = (event.target as HTMLInputElement).value;
-    return streamText({ model, messages: [{ role: 'user', content: query }] }).text$;
+    return streamText({ model, messages: [{ role: 'user', content: [{ type: 'text', text: query }] }] }).text$;
   })
 ).subscribe((text) => {
   appendToResults(text);
