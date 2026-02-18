@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rxjs-ai Playground</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  </head>
+  <body>
+    <div id="app">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <h1>rxjs-ai</h1>
+          <span class="badge">playground</span>
+        </div>
+        <ul class="nav-list">
+          <li><button class="nav-btn active" data-demo="chat">AI Chat</button></li>
+          <li><button class="nav-btn" data-demo="store">Reactive Store</button></li>
+          <li><button class="nav-btn" data-demo="async">Async Controller</button></li>
+          <li><button class="nav-btn" data-demo="commands">Command Bus</button></li>
+          <li><button class="nav-btn" data-demo="composition">Stream Composition</button></li>
+        </ul>
+        <div class="sidebar-footer">
+          <a href="https://github.com/user/rxjs-ai" target="_blank" rel="noopener">GitHub</a>
+          <span class="version">v0.1.0</span>
+        </div>
+      </nav>
+      <main class="content">
+        <!-- Chat Demo -->
+        <section id="demo-chat" class="demo-panel active">
+          <div class="demo-header">
+            <h2>AI Chat</h2>
+            <p>Interactive chat with a mock streaming model. Demonstrates <code>createChatController</code> with real-time streaming, cancellation, and retry.</p>
+          </div>
+          <div class="chat-container">
+            <div class="chat-status-bar">
+              <span class="status-indicator"></span>
+              <span id="chat-status-text">idle</span>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+              <div class="chat-empty">Send a message to start chatting</div>
+            </div>
+            <div class="chat-input-area">
+              <div class="chat-actions">
+                <button id="btn-cancel" class="btn btn-secondary" disabled>Cancel</button>
+                <button id="btn-retry" class="btn btn-secondary" disabled>Retry Last</button>
+                <button id="btn-clear" class="btn btn-ghost">Clear</button>
+              </div>
+              <form id="chat-form" class="chat-form">
+                <input id="chat-input" type="text" placeholder="Type a message..." autocomplete="off" />
+                <button type="submit" class="btn btn-primary">Send</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Store Demo -->
+        <section id="demo-store" class="demo-panel">
+          <div class="demo-header">
+            <h2>Reactive Store</h2>
+            <p>A reactive state container with selectors. Demonstrates <code>createStore</code> with <code>setState</code>, <code>patchState</code>, and <code>select</code>.</p>
+          </div>
+          <div class="store-container">
+            <div class="store-cards">
+              <div class="card">
+                <h3>Counter</h3>
+                <div class="counter-display">
+                  <span id="counter-value" class="counter-value">0</span>
+                </div>
+                <div class="counter-actions">
+                  <button id="btn-decrement" class="btn btn-secondary">-1</button>
+                  <button id="btn-increment" class="btn btn-primary">+1</button>
+                  <button id="btn-reset" class="btn btn-ghost">Reset</button>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Theme</h3>
+                <div class="theme-display">
+                  <span>Current theme:</span>
+                  <span id="theme-value" class="theme-badge">light</span>
+                </div>
+                <button id="btn-toggle-theme" class="btn btn-secondary">Toggle Theme</button>
+              </div>
+              <div class="card">
+                <h3>Username</h3>
+                <div class="username-display">
+                  <span>Current:</span>
+                  <span id="username-value">Guest</span>
+                </div>
+                <div class="username-form">
+                  <input id="username-input" type="text" placeholder="Enter name..." />
+                  <button id="btn-set-username" class="btn btn-primary">Set</button>
+                </div>
+              </div>
+            </div>
+            <div class="card state-log-card">
+              <h3>Live State (state$)</h3>
+              <pre id="store-state-log" class="state-log"></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- Async Controller Demo -->
+        <section id="demo-async" class="demo-panel">
+          <div class="demo-header">
+            <h2>Async Controller</h2>
+            <p>Search-as-you-type with auto-cancellation. Demonstrates <code>createAsyncController</code> — each new keystroke cancels the previous in-flight request.</p>
+          </div>
+          <div class="async-container">
+            <div class="search-box">
+              <input id="async-search-input" type="text" placeholder="Search programming languages..." autocomplete="off" />
+              <button id="btn-async-cancel" class="btn btn-secondary" disabled>Cancel</button>
+            </div>
+            <div class="async-status">
+              <span class="status-indicator"></span>
+              <span id="async-status-text">idle</span>
+            </div>
+            <div id="async-results" class="async-results">
+              <div class="async-empty">Start typing to search</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Command Bus Demo -->
+        <section id="demo-commands" class="demo-panel">
+          <div class="demo-header">
+            <h2>Command Bus</h2>
+            <p>Type-safe event dispatching. Demonstrates <code>createCommandBus</code> with <code>dispatch</code> and <code>ofType</code> filtering.</p>
+          </div>
+          <div class="commands-container">
+            <div class="dispatch-panel">
+              <h3>Dispatch Commands</h3>
+              <div class="dispatch-buttons">
+                <button class="btn btn-primary" data-cmd="userLoggedIn">User Logged In</button>
+                <button class="btn btn-secondary" data-cmd="itemAdded">Add Item</button>
+                <button class="btn btn-secondary" data-cmd="itemRemoved">Remove Item</button>
+                <button class="btn btn-ghost" data-cmd="themeChanged">Toggle Theme</button>
+              </div>
+            </div>
+            <div class="filter-panel">
+              <h3>Active Filters (ofType)</h3>
+              <div class="filter-toggles">
+                <label><input type="checkbox" value="userLoggedIn" checked /> userLoggedIn</label>
+                <label><input type="checkbox" value="itemAdded" checked /> itemAdded</label>
+                <label><input type="checkbox" value="itemRemoved" checked /> itemRemoved</label>
+                <label><input type="checkbox" value="themeChanged" checked /> themeChanged</label>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Event Log <button id="btn-clear-log" class="btn btn-ghost btn-sm">Clear</button></h3>
+              <div id="commands-log" class="event-log">
+                <div class="log-empty">Dispatch a command to see events</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stream Composition Demo -->
+        <section id="demo-composition" class="demo-panel">
+          <div class="demo-header">
+            <h2>Stream Composition</h2>
+            <p>Race two models and compose RxJS operators. Demonstrates <code>race()</code>, adapter composition, and <code>createViewModel</code>.</p>
+          </div>
+          <div class="composition-container">
+            <div class="race-panel">
+              <h3>Race Two Models</h3>
+              <p class="text-muted">Sends the same prompt to a "fast" and "slow" model. The first to respond wins, and the loser is auto-cancelled.</p>
+              <div class="race-config">
+                <div class="race-model">
+                  <label>Fast Model Delay</label>
+                  <input id="race-fast-delay" type="range" min="50" max="500" value="80" />
+                  <span id="race-fast-delay-val">80ms</span>
+                </div>
+                <div class="race-model">
+                  <label>Slow Model Delay</label>
+                  <input id="race-slow-delay" type="range" min="100" max="1000" value="300" />
+                  <span id="race-slow-delay-val">300ms</span>
+                </div>
+              </div>
+              <div class="race-input">
+                <input id="race-prompt" type="text" placeholder="Enter a prompt..." value="Explain observables" />
+                <button id="btn-race" class="btn btn-primary">Race!</button>
+              </div>
+              <div class="race-results">
+                <div class="race-result" id="race-result-fast">
+                  <h4>Fast Model <span class="race-tag" id="race-tag-fast"></span></h4>
+                  <div class="race-output" id="race-output-fast">-</div>
+                </div>
+                <div class="race-result" id="race-result-slow">
+                  <h4>Slow Model <span class="race-tag" id="race-tag-slow"></span></h4>
+                  <div class="race-output" id="race-output-slow">-</div>
+                </div>
+              </div>
+            </div>
+            <div class="viewmodel-panel">
+              <h3>createViewModel</h3>
+              <p class="text-muted">Combines multiple Observable sources into a single projected view model, updating in real-time.</p>
+              <div class="vm-sources">
+                <div class="vm-source">
+                  <label>Mouse position (move your mouse)</label>
+                  <span id="vm-mouse">x: 0, y: 0</span>
+                </div>
+                <div class="vm-source">
+                  <label>Window width</label>
+                  <span id="vm-width">-</span>
+                </div>
+                <div class="vm-source">
+                  <label>Time (ticks every 1s)</label>
+                  <span id="vm-time">-</span>
+                </div>
+              </div>
+              <div class="card">
+                <h4>Projected ViewModel</h4>
+                <pre id="vm-output" class="state-log"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
