@@ -1,0 +1,213 @@
+---
+title: Why RxJS for AI?
+description: AI is streaming. RxJS is streaming. It is a natural fit.
+---
+
+import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+## AI is streaming. RxJS is streaming.
+
+Large language models produce tokens one at a time. Tool calls fire mid-stream. Users expect real-time feedback, cancellation, and retry — all while the response is still arriving.
+
+RxJS was built for exactly this kind of problem. It has spent a decade solving streaming, cancellation, composition, and backpressure in production systems. rxjs-ai brings that power to AI applications without reinventing the wheel.
+
+## Real-world examples
+
+### Retry with exponential backoff
+
+API rate limits and transient failures are a fact of life. With RxJS, retry logic is a one-liner:
+
+```ts
+import { retry, timer } from 'rxjs';
+
+chat.send('Summarize this document');
+
+// If the model errors, retry up to 3 times with exponential backoff
+model.stream(messages).pipe(
+  retry({
+    count: 3,
+    delay: (error, retryCount) => timer(1000 * Math.pow(2, retryCount)),
+  })
+);
+```
+
+No loops. No manual state tracking. The operator handles everything.
+
+### Race two models
+
+Want the fastest response? Race two models and take whichever finishes first:
+
+```ts
+import { race } from 'rxjs';
+
+const gpt$ = gptModel.stream(messages);
+const claude$ = claudeModel.stream(messages);
+
+race(gpt$, claude$).subscribe((token) => {
+  console.log(token);
+});
+```
+
+The losing model's stream is automatically unsubscribed — no wasted tokens, no dangling connections.
+
+### Throttle UI updates
+
+LLMs can emit hundreds of tokens per second. Rendering on every single token thrashes the DOM. Throttle updates to a reasonable frame rate:
+
+```ts
+import { throttleTime } from 'rxjs';
+
+chat.messages$.pipe(
+  throttleTime(50, undefined, { leading: true, trailing: true })
+).subscribe((messages) => {
+  renderChat(messages);
+});
+```
+
+Fifty milliseconds gives you smooth 20fps updates instead of a firehose. The `trailing: true` option ensures you always render the final state.
+
+### Cancel on navigation
+
+When a user navigates away, you want to stop streaming immediately. With rxjs-ai, the subscription teardown handles this automatically:
+
+```ts
+const subscription = chat.messages$.subscribe((messages) => {
+  renderChat(messages);
+});
+
+// User clicks "Back" — cancel everything
+router.on('navigate', () => {
+  subscription.unsubscribe(); // Stream stops, resources released
+  chat.cancel();              // Abort the in-flight request
+});
+```
+
+No `AbortController` to create, no signal to thread through, no cleanup callbacks to remember.
+
+### Combine multiple sources
+
+Build rich UIs by composing Observables from different sources:
+
+```ts
+import { combineLatest, map } from 'rxjs';
+
+const vm$ = combineLatest([
+  chat.messages$,
+  chat.status$,
+  settingsStore.select((s) => s.theme),
+]).pipe(
+  map(([messages, status, theme]) => ({
+    messages,
+    isStreaming: status === 'streaming',
+    theme,
+  }))
+);
+
+vm$.subscribe((viewModel) => {
+  render(viewModel);
+});
+```
+
+Every time any source emits, you get a fresh, consistent view model. This is exactly what `createViewModel` does under the hood.
+
+### Debounce search
+
+For search-as-you-type against an AI model, debounce the input to avoid hammering the API:
+
+```ts
+import { debounceTime, switchMap, fromEvent } from 'rxjs';
+
+fromEvent(searchInput, 'input').pipe(
+  debounceTime(300),
+  switchMap((event) => {
+    const query = (event.target as HTMLInputElement).value;
+    return model.stream([{ role: 'user', content: query }]);
+  })
+).subscribe((token) => {
+  appendToResults(token);
+});
+```
+
+`switchMap` automatically cancels the previous in-flight request when a new one starts. No race conditions, no stale results.
+
+## Cancellation is free
+
+In RxJS, cancellation is not a feature you wire up — it is a fundamental property of the subscription model. When you call `unsubscribe()`, the teardown function runs and resources are released. Every rxjs-ai primitive respects this:
+
+```ts
+const sub = chat.messages$.subscribe(render);
+
+// Later — everything stops cleanly
+sub.unsubscribe();
+```
+
+Compare this with the `AbortController` approach:
+
+```ts
+// Without rxjs-ai
+const controller = new AbortController();
+const response = await fetch('/api/chat', { signal: controller.signal });
+// Hope you remembered to pass the signal everywhere...
+controller.abort();
+```
+
+## State management built in
+
+rxjs-ai includes `createStore` for state and `createViewModel` for derived view state. No external state library needed:
+
+```ts
+import { createStore, createViewModel } from 'rxjs-ai';
+
+// Define your store
+const store = createStore({ count: 0, name: 'World' });
+
+// Derive a view model with fine-grained selectors
+const vm = createViewModel({
+  count: store.select((s) => s.count),
+  greeting: store.select((s) => `Hello, ${s.name}!`),
+});
+
+// Subscribe to the combined view
+vm.state$.subscribe(console.log);
+// { count: 0, greeting: 'Hello, World!' }
+
+store.update((s) => ({ ...s, count: s.count + 1 }));
+// { count: 1, greeting: 'Hello, World!' }
+```
+
+Because everything is an Observable, your stores, view models, and chat controllers all compose naturally.
+
+## Framework agnostic
+
+The core of rxjs-ai has zero framework dependencies. It works in Node.js scripts, Deno, Bun, web workers, and any frontend framework.
+
+For React, rxjs-ai ships a thin adapter:
+
+```tsx
+import { useObservableValue } from 'rxjs-ai/react';
+
+function ChatView({ chat }) {
+  const messages = useObservableValue(chat.messages$, []);
+  const status = useObservableValue(chat.status$, 'idle');
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <p key={msg.id}>{msg.content}</p>
+      ))}
+      {status === 'streaming' && <p>Thinking...</p>}
+    </div>
+  );
+}
+```
+
+Vue, Svelte, Angular, Solid — any framework that can subscribe to an Observable (all of them) works with rxjs-ai out of the box.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard title="Quick Start" href="/getting-started/quick-start/" description="Build your first streaming chat in 5 minutes." />
+  <LinkCard title="createStore" href="/core/create-store/" description="State management primitive." />
+  <LinkCard title="createChatController" href="/ai/create-chat-controller/" description="Full chat lifecycle controller." />
+  <LinkCard title="createViewModel" href="/ui/create-view-model/" description="Derived view state from Observables." />
+</CardGrid>

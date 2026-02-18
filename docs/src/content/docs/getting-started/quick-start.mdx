@@ -1,0 +1,183 @@
+---
+title: Quick Start
+description: Build your first streaming AI chat in 5 minutes with rxjs-ai.
+---
+
+Follow along to go from zero to a working streaming chat in just a few steps.
+
+## 1. Install rxjs-ai
+
+```bash
+npm install rxjs-ai rxjs
+```
+
+## 2. Create a Model Adapter
+
+A model adapter is any object with a `complete` method that accepts a request with `messages` and `signal`, and returns an `Observable` of text chunks. Here is a simple echo model that streams words back one at a time:
+
+```ts
+import { Observable } from "rxjs";
+import type { ChatModelAdapter } from "rxjs-ai";
+
+const echoModel: ChatModelAdapter = {
+  complete: ({ messages, signal }) => {
+    const lastMessage = messages[messages.length - 1];
+    const words = `Echo: ${lastMessage?.content ?? ""}`.split(" ");
+
+    return new Observable<string>((subscriber) => {
+      let i = 0;
+      const id = setInterval(() => {
+        if (signal.aborted) return clearInterval(id);
+        if (i < words.length) {
+          subscriber.next(words[i] + " ");
+          i++;
+        } else {
+          clearInterval(id);
+          subscriber.complete();
+        }
+      }, 100);
+
+      // Cleanup on unsubscribe — cancellation is free
+      return () => clearInterval(id);
+    });
+  },
+};
+```
+
+:::tip
+The teardown function returned from the Observable constructor runs automatically when the subscriber unsubscribes. This is how rxjs-ai gets cancellation for free — no `AbortController` needed on your side.
+:::
+
+## 3. Create a Chat Controller
+
+Pass your model adapter to `createChatController`:
+
+```ts
+import { createChatController } from "rxjs-ai";
+
+const chat = createChatController(echoModel);
+```
+
+## 4. Subscribe to Status and Messages
+
+The chat controller exposes Observables for every piece of state:
+
+```ts
+chat.status$.subscribe((status) => {
+  console.log("Status:", status);
+});
+
+chat.messages$.subscribe((messages) => {
+  const last = messages[messages.length - 1];
+  if (last?.role === "assistant") {
+    console.log("Assistant:", last.content);
+  }
+});
+```
+
+## 5. Send a Message
+
+Call `send()` to add a user message and kick off streaming:
+
+```ts
+chat.send("Hello, rxjs-ai!");
+```
+
+You will see output like this:
+
+```
+Status: loading
+Status: streaming
+Assistant: Echo:
+Assistant: Echo: Hello,
+Assistant: Echo: Hello, rxjs-ai!
+Status: idle
+```
+
+Each `messages$` emission contains the full message array with the assistant's content accumulated so far — perfect for rendering in a UI.
+
+## 6. Cancel and Retry
+
+Cancel a stream mid-flight with `cancel()`, then retry the last message with `retryLast()`:
+
+```ts
+// Start streaming
+chat.send("Tell me a long story");
+
+// Cancel after 200ms
+setTimeout(() => {
+  chat.cancel();
+  console.log("Cancelled!");
+
+  // Retry the same message
+  chat.retryLast();
+}, 200);
+```
+
+Cancellation tears down the underlying Observable subscription immediately. No tokens are wasted, no cleanup callbacks to remember.
+
+## 7. Clean Up
+
+When you are done — for example, when the user navigates away — call `destroy()` to complete all internal Observables and release resources:
+
+```ts
+chat.destroy();
+```
+
+## Full Example
+
+Here is the complete script in one block:
+
+```ts
+import { Observable } from "rxjs";
+import { createChatController } from "rxjs-ai";
+import type { ChatModelAdapter } from "rxjs-ai";
+
+// 1. Model adapter
+const echoModel: ChatModelAdapter = {
+  complete: ({ messages, signal }) => {
+    const lastMessage = messages[messages.length - 1];
+    const words = `Echo: ${lastMessage?.content ?? ""}`.split(" ");
+
+    return new Observable<string>((subscriber) => {
+      let i = 0;
+      const id = setInterval(() => {
+        if (signal.aborted) return clearInterval(id);
+        if (i < words.length) {
+          subscriber.next(words[i] + " ");
+          i++;
+        } else {
+          clearInterval(id);
+          subscriber.complete();
+        }
+      }, 100);
+      return () => clearInterval(id);
+    });
+  },
+};
+
+// 2. Chat controller
+const chat = createChatController(echoModel);
+
+// 3. Subscribe
+chat.status$.subscribe((s) => console.log("Status:", s));
+chat.messages$.subscribe((msgs) => {
+  const last = msgs[msgs.length - 1];
+  if (last?.role === "assistant") {
+    console.log("Assistant:", last.content);
+  }
+});
+
+// 4. Send
+chat.send("Hello, rxjs-ai!");
+
+// 5. Cleanup after 2 seconds
+setTimeout(() => chat.destroy(), 2000);
+```
+
+## Next Steps
+
+- [Chat Controller](/ai/chat-controller/) — full API reference
+- [Model Adapters](/ai/model-adapters/) — connect to real LLMs
+- [createStore](/core/create-store/) — add reactive state management
+- [Why rxjs-ai?](/getting-started/why-rxjs-ai/) — understand the RxJS advantage

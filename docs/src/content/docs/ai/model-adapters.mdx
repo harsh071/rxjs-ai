@@ -1,0 +1,171 @@
+---
+title: Model Adapters
+description: Connect rxjs-ai to any LLM by implementing the ChatModelAdapter interface.
+---
+
+## The adapter pattern
+
+rxjs-ai is **model-agnostic** by design. The only contract between the library and your LLM is the `ChatModelAdapter` interface:
+
+```ts
+import { type ChatModelAdapter, type ChatMessage, type ChatChunk } from "rxjs-ai";
+import { type Observable } from "rxjs";
+
+interface ChatModelAdapter {
+  complete(request: { messages: ChatMessage[] }): Observable<ChatChunk>;
+}
+```
+
+Implement `complete()`, return an `Observable<ChatChunk>`, and you are done. The controller handles subscriptions, cancellation, error propagation, and state management for you.
+
+## Echo adapter (simplest possible)
+
+A great starting point for testing — it echoes back whatever the user sent:
+
+```ts
+import { of } from "rxjs";
+import { type ChatModelAdapter } from "rxjs-ai";
+
+const echoAdapter: ChatModelAdapter = {
+  complete({ messages }) {
+    const last = messages.filter((m) => m.role === "user").at(-1);
+    return of(`Echo: ${last?.content ?? "(empty)"}`);
+  },
+};
+```
+
+Because `of()` emits a single value and completes synchronously, the controller transitions through `loading` → `streaming` → `idle` almost instantly.
+
+## Streaming adapter (simulated)
+
+To exercise the **streaming** status you can drip-feed chunks on a timer:
+
+```ts
+import { Observable } from "rxjs";
+import { type ChatModelAdapter, type ChatChunk } from "rxjs-ai";
+
+const streamingAdapter: ChatModelAdapter = {
+  complete({ messages }) {
+    const words = "This is a simulated streaming response.".split(" ");
+
+    return new Observable<ChatChunk>((subscriber) => {
+      let i = 0;
+      const id = setInterval(() => {
+        if (i < words.length) {
+          const isLast = i === words.length - 1;
+          subscriber.next({
+            content: (i === 0 ? "" : " ") + words[i],
+            done: isLast,
+          });
+          i++;
+        } else {
+          subscriber.complete();
+          clearInterval(id);
+        }
+      }, 80);
+
+      // Teardown: stop the timer when the subscription is cancelled
+      return () => clearInterval(id);
+    });
+  },
+};
+```
+
+Returning a teardown function from the `Observable` constructor ensures that calling `chat.cancel()` cleans up the interval immediately.
+
+## Fetch-based adapter (Server-Sent Events)
+
+Most production LLM APIs (OpenAI, Anthropic, etc.) expose a streaming endpoint via **Server-Sent Events (SSE)**. Here is a minimal adapter that consumes such an endpoint:
+
+```ts
+import { Observable } from "rxjs";
+import { type ChatModelAdapter, type ChatChunk } from "rxjs-ai";
+
+const sseAdapter: ChatModelAdapter = {
+  complete({ messages }) {
+    return new Observable<ChatChunk>((subscriber) => {
+      const controller = new AbortController();
+
+      (async () => {
+        try {
+          const response = await fetch("https://api.example.com/v1/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              stream: true,
+              messages: messages.map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const data = line.slice(6).trim();
+              if (data === "[DONE]") {
+                subscriber.next({ content: "", done: true });
+                subscriber.complete();
+                return;
+              }
+              const parsed = JSON.parse(data);
+              const token = parsed.choices?.[0]?.delta?.content;
+              if (token) {
+                subscriber.next(token);
+              }
+            }
+          }
+
+          subscriber.complete();
+        } catch (err: unknown) {
+          if ((err as Error).name !== "AbortError") {
+            subscriber.error(err);
+          }
+        }
+      })();
+
+      return () => controller.abort();
+    });
+  },
+};
+```
+
+### Key points
+
+- **AbortController** is wired to the Observable teardown so `chat.cancel()` aborts the fetch.
+- SSE lines are parsed incrementally — no third-party eventsource library required.
+- Errors (network failures, non-2xx responses) are forwarded to the subscriber, which surfaces them via `chat.error$`.
+
+## Upcoming provider packages
+
+We are working on ready-made adapter packages so you do not have to write the boilerplate above:
+
+| Package | Status |
+|---|---|
+| `@rxjs-ai/openai` | Planned |
+| `@rxjs-ai/anthropic` | Planned |
+| `@rxjs-ai/ollama` | Planned |
+| `@rxjs-ai/google` | Planned |
+
+Each package will export a factory function that accepts provider-specific options and returns a `ChatModelAdapter`. Stay tuned for updates.

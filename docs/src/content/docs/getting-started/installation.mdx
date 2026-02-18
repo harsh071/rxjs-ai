@@ -1,0 +1,110 @@
+---
+title: Installation
+description: Install rxjs-ai and configure your project.
+---
+
+import { Aside, Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
+
+## Requirements
+
+| Dependency | Version |
+|---|---|
+| Node.js | `>= 18` |
+| RxJS | `>= 7.8.0` |
+| TypeScript | `>= 5.0` (recommended) |
+
+## Install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install rxjs-ai rxjs
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add rxjs-ai rxjs
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add rxjs-ai rxjs
+    ```
+  </TabItem>
+</Tabs>
+
+`rxjs` is a peer dependency — you must install it alongside `rxjs-ai`.
+
+## Optional: React bindings
+
+If you are building a React application, install React as well:
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install react
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add react
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add react
+    ```
+  </TabItem>
+</Tabs>
+
+Then import hooks from the React sub-path:
+
+```ts
+import { useObservableValue } from 'rxjs-ai/react';
+```
+
+## Package exports
+
+rxjs-ai ships two entry points:
+
+| Import path | What you get |
+|---|---|
+| `rxjs-ai` | Core primitives, AI controllers, and UI utilities — `createStore`, `createCommandBus`, `createAsyncController`, `createChatController`, `createViewModel` |
+| `rxjs-ai/react` | React hooks — `useObservableValue` |
+
+```ts
+// Core — works everywhere
+import {
+  createStore,
+  createCommandBus,
+  createAsyncController,
+  createChatController,
+  createViewModel,
+} from 'rxjs-ai';
+
+// React — requires React 18+
+import { useObservableValue } from 'rxjs-ai/react';
+```
+
+## TypeScript
+
+All types are exported directly from the main entry point. No separate `@types` package is needed.
+
+```ts
+import type {
+  ChatController,
+  AsyncController,
+  Store,
+  ViewModel,
+  ModelAdapter,
+  ChatMessage,
+} from 'rxjs-ai';
+```
+
+<Aside type="note">
+rxjs-ai is written in TypeScript and ships its own type declarations. Enabling `strict` mode in your `tsconfig.json` is recommended for the best experience.
+</Aside>
+
+## Next steps
+
+<LinkCard title="Quick Start" href="/getting-started/quick-start/" description="Build your first streaming chat in 5 minutes." />

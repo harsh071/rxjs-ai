@@ -1,0 +1,110 @@
+---
+title: createViewModel
+description: Combine multiple Observable sources into a single projected view model.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Overview
+
+`createViewModel` combines multiple Observable sources into a **single projected view model** using `combineLatest`, `map`, and `distinctUntilChanged`. It is the recommended way to compose data from several stores or streams into a UI-ready shape that only emits when the projected output actually changes.
+
+## Import
+
+```ts
+import { createViewModel } from "rxjs-ai";
+```
+
+## Basic usage
+
+```ts
+import { createStore, createViewModel } from "rxjs-ai";
+
+// Two independent stores
+const userStore = createStore({ name: "Alice", role: "admin" });
+const uiStore = createStore({ theme: "dark", sidebarOpen: true });
+
+// Combine selectors into a single view model
+const vm$ = createViewModel(
+  {
+    userName: userStore.select((s) => s.name),
+    role: userStore.select((s) => s.role),
+    theme: uiStore.select((s) => s.theme),
+    sidebarOpen: uiStore.select((s) => s.sidebarOpen),
+  },
+  (sources) => ({
+    greeting: `Hello, ${sources.userName}`,
+    isAdmin: sources.role === "admin",
+    theme: sources.theme,
+    sidebarOpen: sources.sidebarOpen,
+  }),
+);
+
+vm$.subscribe((vm) => {
+  console.log(vm.greeting); // "Hello, Alice"
+  console.log(vm.isAdmin); // true
+  console.log(vm.theme); // "dark"
+});
+```
+
+The returned `Observable` only emits when the **projected output** changes, preventing unnecessary re-renders or side-effects downstream.
+
+## Custom comparator
+
+By default, `createViewModel` uses referential equality (`===`) on the projected result to determine whether a new emission should be sent to subscribers. For projected objects (which create a new reference on every emission), you should provide a custom comparator:
+
+```ts
+import { isEqual } from "lodash-es";
+
+const vm$ = createViewModel(
+  {
+    items: store.select((s) => s.items),
+    filter: store.select((s) => s.filter),
+  },
+  ({ items, filter }) => ({
+    visibleItems: items.filter((item) => item.category === filter),
+    totalCount: items.length,
+  }),
+  isEqual, // deep equality prevents duplicate emissions
+);
+```
+
+You can also use a field-level comparator for more granular control:
+
+```ts
+const vm$ = createViewModel(
+  {
+    items: store.select((s) => s.items),
+    query: store.select((s) => s.query),
+  },
+  ({ items, query }) => ({
+    results: items.filter((i) => i.name.includes(query)),
+    query,
+  }),
+  (prev, next) =>
+    prev.query === next.query && prev.results.length === next.results.length,
+);
+```
+
+## API
+
+```ts
+function createViewModel<
+  Sources extends Record<string, Observable<any>>,
+  ViewModel,
+>(
+  sources: Sources,
+  projector: (
+    values: { [K in keyof Sources]: ObservedValueOf<Sources[K]> },
+  ) => ViewModel,
+  compare?: (previous: ViewModel, current: ViewModel) => boolean,
+): Observable<ViewModel>;
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `sources` | `Record<string, Observable<any>>` | A named map of Observable sources. Each key becomes a property on the object passed to the projector. |
+| `projector` | `(values) => ViewModel` | A pure function that receives the latest values from all sources and returns the projected view model shape. |
+| `compare?` | `(previous: ViewModel, current: ViewModel) => boolean` | Optional equality function used by `distinctUntilChanged`. Defaults to `===`. Return `true` when the two values should be considered equal (suppressing the emission). |
+
+**Returns:** `Observable<ViewModel>` -- an Observable that emits the projected view model whenever any source emits and the projected output differs from the previous emission.

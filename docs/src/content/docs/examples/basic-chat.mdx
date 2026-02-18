@@ -1,0 +1,231 @@
+---
+title: Basic Chat
+description: Build a simple chat interface with rxjs-ai.
+---
+
+## What we are building
+
+A minimal, runnable chat example that wires together a **model adapter**, a **chat controller**, and console-based output. By the end you will have a working script that:
+
+1. Simulates a streaming LLM response.
+2. Prints each chunk as it arrives.
+3. Demonstrates cancel and retry patterns.
+
+## Step 1 — Create a model adapter
+
+```ts
+import { Observable } from "rxjs";
+import { type ChatModelAdapter, type ChatChunk } from "rxjs-ai";
+
+const adapter: ChatModelAdapter = {
+  complete({ messages }) {
+    const lastUser = messages.filter((m) => m.role === "user").at(-1);
+    const reply = `You said: "${lastUser?.content}". Here is a simulated AI response that streams word by word.`;
+    const words = reply.split(" ");
+
+    return new Observable<ChatChunk>((subscriber) => {
+      let index = 0;
+
+      const id = setInterval(() => {
+        if (index < words.length) {
+          subscriber.next({
+            content: (index === 0 ? "" : " ") + words[index],
+            done: index === words.length - 1,
+          });
+          index++;
+        } else {
+          subscriber.complete();
+          clearInterval(id);
+        }
+      }, 60);
+
+      return () => clearInterval(id);
+    });
+  },
+};
+```
+
+## Step 2 — Create the chat controller
+
+```ts
+import { createChatController } from "rxjs-ai";
+
+const chat = createChatController({ adapter });
+```
+
+## Step 3 — Subscribe to messages and status
+
+```ts
+// Log every status change
+chat.status$.subscribe((status) => {
+  console.log(`[status] ${status}`);
+});
+
+// Log the assistant message content as it streams in
+chat.messages$.subscribe((messages) => {
+  const last = messages.at(-1);
+  if (last?.role === "assistant") {
+    process.stdout.write(`\r[assistant] ${last.content}`);
+  }
+});
+
+// Log errors
+chat.error$.subscribe((err) => {
+  if (err) console.error(`\n[error] ${err.message}`);
+});
+```
+
+## Step 4 — Send a message
+
+```ts
+chat.send("Hello, rxjs-ai!");
+```
+
+Running the code above produces output similar to:
+
+```
+[status] loading
+[status] streaming
+[assistant] You said: "Hello, rxjs-ai!". Here is a simulated AI response that streams word by word.
+[status] idle
+```
+
+## Cancel a streaming response
+
+Call `cancel()` at any point while the status is `loading` or `streaming`:
+
+```ts
+chat.send("Tell me a long story");
+
+// Cancel after 200 ms
+setTimeout(() => {
+  chat.cancel();
+  console.log("\n[cancelled]");
+}, 200);
+```
+
+Output:
+
+```
+[status] loading
+[status] streaming
+[assistant] You said: "Tell me a long story". Here is
+[status] cancelled
+[cancelled]
+```
+
+The partial assistant message remains in the history so the user can see what was received before cancellation.
+
+## Retry the last completion
+
+If the adapter errors — or you simply want to regenerate the response — call `retryLast()`:
+
+```ts
+import { Observable, throwError, of } from "rxjs";
+
+let attempts = 0;
+
+const flakyAdapter: ChatModelAdapter = {
+  complete({ messages }) {
+    attempts++;
+    if (attempts === 1) {
+      // Fail on the first attempt
+      return throwError(() => new Error("Temporary failure"));
+    }
+    return of("Success on retry!");
+  },
+};
+
+const chat2 = createChatController({ adapter: flakyAdapter });
+
+chat2.status$.subscribe((s) => console.log(`[status] ${s}`));
+chat2.error$.subscribe((e) => {
+  if (e) console.log(`[error] ${e.message}`);
+});
+chat2.messages$.subscribe((msgs) => {
+  const last = msgs.at(-1);
+  if (last?.role === "assistant") {
+    console.log(`[assistant] ${last.content}`);
+  }
+});
+
+// First attempt will fail
+chat2.send("Hi");
+// After the error, retry
+setTimeout(() => chat2.retryLast(), 500);
+```
+
+Output:
+
+```
+[status] loading
+[error] Temporary failure
+[status] error
+[status] loading
+[status] streaming
+[assistant] Success on retry!
+[status] idle
+```
+
+## Full code listing
+
+Copy the following into a single TypeScript file and run it with `tsx` or `ts-node`:
+
+```ts
+import { Observable, throwError, of } from "rxjs";
+import {
+  createChatController,
+  type ChatModelAdapter,
+  type ChatChunk,
+} from "rxjs-ai";
+
+// --- Adapter ---
+const adapter: ChatModelAdapter = {
+  complete({ messages }) {
+    const lastUser = messages.filter((m) => m.role === "user").at(-1);
+    const reply = `You said: "${lastUser?.content}". Here is a simulated AI response that streams word by word.`;
+    const words = reply.split(" ");
+
+    return new Observable<ChatChunk>((subscriber) => {
+      let index = 0;
+      const id = setInterval(() => {
+        if (index < words.length) {
+          subscriber.next({
+            content: (index === 0 ? "" : " ") + words[index],
+            done: index === words.length - 1,
+          });
+          index++;
+        } else {
+          subscriber.complete();
+          clearInterval(id);
+        }
+      }, 60);
+      return () => clearInterval(id);
+    });
+  },
+};
+
+// --- Controller ---
+const chat = createChatController({ adapter });
+
+// --- Subscriptions ---
+chat.status$.subscribe((status) => console.log(`[status] ${status}`));
+chat.error$.subscribe((err) => {
+  if (err) console.error(`[error] ${err.message}`);
+});
+chat.messages$.subscribe((messages) => {
+  const last = messages.at(-1);
+  if (last?.role === "assistant") {
+    process.stdout.write(`\r[assistant] ${last.content}`);
+  }
+});
+
+// --- Interaction ---
+chat.send("Hello, rxjs-ai!");
+
+// Clean up after the response completes
+setTimeout(() => {
+  console.log("\n\nDone. Destroying controller.");
+  chat.destroy();
+}, 3000);
+```

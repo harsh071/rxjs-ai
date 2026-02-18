@@ -1,0 +1,138 @@
+---
+title: createAsyncController
+description: Manages async request lifecycle with status tracking and cancellation.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Overview
+
+`createAsyncController` provides **switchMap-based request orchestration** with built-in status tracking and an `AbortController` for cancellation. When a new request is triggered via `execute()`, the previous in-flight request is automatically cancelled. This makes it ideal for search-as-you-type, data fetching, and any scenario where only the latest request matters.
+
+## Import
+
+```ts
+import { createAsyncController } from "rxjs-ai";
+```
+
+## Basic usage
+
+```ts
+import { createAsyncController } from "rxjs-ai";
+
+interface SearchResult {
+  id: string;
+  title: string;
+}
+
+const search = createAsyncController<string, SearchResult[]>();
+
+// Subscribe to state changes
+search.state$.subscribe((state) => {
+  switch (state.status) {
+    case "idle":
+      console.log("Ready to search");
+      break;
+    case "loading":
+      console.log("Searching…");
+      break;
+    case "success":
+      console.log("Results:", state.data);
+      break;
+    case "error":
+      console.log("Failed:", state.error);
+      break;
+    case "cancelled":
+      console.log("Request was cancelled");
+      break;
+  }
+});
+
+// Execute a request — returns an Observable, but state$ is the
+// primary way to observe results.
+search.execute(async (query, signal) => {
+  const res = await fetch(`/api/search?q=${query}`, { signal });
+  return res.json();
+}, "rxjs");
+
+// A second call auto-cancels the first
+search.execute(async (query, signal) => {
+  const res = await fetch(`/api/search?q=${query}`, { signal });
+  return res.json();
+}, "rxjs-ai");
+
+// Manual cancellation
+search.cancel();
+
+// Clean up
+search.destroy();
+```
+
+## State machine
+
+The controller tracks five discrete statuses throughout the request lifecycle:
+
+```
+┌──────┐  execute()  ┌─────────┐  success  ┌─────────┐
+│ idle │────────────▶│ loading │──────────▶│ success │
+└──────┘             └─────────┘           └─────────┘
+                        │   │
+               cancel() │   │ throw
+                        ▼   ▼
+                 ┌───────────┐  ┌───────┐
+                 │ cancelled │  │ error │
+                 └───────────┘  └───────┘
+```
+
+| Status | Description |
+| --- | --- |
+| `idle` | Initial state. No request has been made yet. |
+| `loading` | A request is in-flight. |
+| `success` | The most recent request completed successfully. `state.data` contains the result. |
+| `error` | The most recent request failed. `state.error` contains the rejection reason. |
+| `cancelled` | The most recent request was cancelled, either manually via `cancel()` or automatically by a subsequent `execute()` call. |
+
+## Auto-cancel behaviour
+
+Calling `execute()` while a request is already in-flight will:
+
+1. Abort the previous request's `AbortSignal`.
+2. Transition the state to `cancelled` for the previous request.
+3. Immediately begin the new request, transitioning the state to `loading`.
+
+This uses `switchMap` internally, so only the **latest** request's result is emitted.
+
+## API
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `state$` | `Observable<AsyncState<TResult>>` | Emits the current async state on every transition. Replays the latest value to new subscribers. |
+| `execute(handler, request)` | `(handler: (request: TRequest, signal: AbortSignal) => Promise<TResult>, request: TRequest) => void` | Triggers a new async operation. If a previous operation is in-flight it is automatically cancelled. The `signal` parameter is wired to an internal `AbortController`. |
+| `cancel()` | `() => void` | Manually cancels the current in-flight request and transitions the state to `cancelled`. |
+| `destroy()` | `() => void` | Cancels any in-flight request, completes all internal Subjects, and releases resources. |
+
+## Types
+
+```ts
+/** Possible statuses of an async operation. */
+type AsyncStatus = "idle" | "loading" | "success" | "error" | "cancelled";
+
+/** The state emitted by the controller's state$ Observable. */
+type AsyncState<TResult> =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success"; data: TResult }
+  | { status: "error"; error: unknown }
+  | { status: "cancelled" };
+
+/** The controller instance returned by createAsyncController. */
+type AsyncController<TRequest, TResult> = {
+  state$: Observable<AsyncState<TResult>>;
+  execute: (
+    handler: (request: TRequest, signal: AbortSignal) => Promise<TResult>,
+    request: TRequest,
+  ) => void;
+  cancel: () => void;
+  destroy: () => void;
+};
+```

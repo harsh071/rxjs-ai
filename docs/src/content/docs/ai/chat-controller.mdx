@@ -1,0 +1,155 @@
+---
+title: Chat Controller
+description: Manages a full chat session with streaming, retry, and cancellation.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Overview
+
+`createChatController` is the central orchestrator of **rxjs-ai**. It wires together a model adapter, a message history, and a reactive status machine into a single, easy-to-use handle. Every interaction — sending a message, retrying, or cancelling — is expressed as an RxJS stream, so you can compose it with any other reactive logic in your application.
+
+```ts
+import { createChatController } from "rxjs-ai";
+
+const chat = createChatController({ adapter: myAdapter });
+```
+
+## ChatModelAdapter interface
+
+Before creating a controller you need an **adapter** — an object with a single method that bridges rxjs-ai to your LLM of choice.
+
+```ts
+interface ChatModelAdapter {
+  complete(request: { messages: ChatMessage[] }): Observable<ChatChunk>;
+}
+```
+
+The `complete` method receives the full conversation history and must return an `Observable` that emits one or more **chunks** as the model responds.
+
+### ChatChunk
+
+A chunk is either a plain string or a structured object:
+
+```ts
+type ChatChunk = string | { content: string; done?: boolean };
+```
+
+| Form | When to use |
+|---|---|
+| `string` | Quick prototyping — every emission is appended to the assistant message. |
+| `{ content, done? }` | Production adapters — set `done: true` on the final chunk to signal completion explicitly. |
+
+## Basic usage
+
+```ts
+import { createChatController } from "rxjs-ai";
+
+const adapter = {
+  complete({ messages }) {
+    // Return an Observable<ChatChunk>
+    return myLlmStream(messages);
+  },
+};
+
+const chat = createChatController({ adapter });
+
+// Subscribe to state changes
+chat.messages$.subscribe((msgs) => console.log("Messages:", msgs));
+chat.status$.subscribe((s) => console.log("Status:", s));
+
+// Send a user message — the adapter is called automatically
+chat.send("Hello, AI!");
+```
+
+## API reference
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `adapter` | `ChatModelAdapter` | **required** | The model adapter to use for completions. |
+| `now` | `() => number` | `Date.now` | Clock function used for message timestamps. |
+| `idGenerator` | `() => string` | internal nanoid | Custom ID generator for message IDs. |
+| `initialMessages` | `ChatMessage[]` | `[]` | Pre-populate the conversation history. |
+
+### Returned handle — `ChatController`
+
+#### Observable properties
+
+| Property | Type | Description |
+|---|---|---|
+| `messages$` | `Observable<ChatMessage[]>` | Current message list. Emits after every mutation. |
+| `status$` | `Observable<ChatStatus>` | Lifecycle status of the controller. |
+| `error$` | `Observable<Error \| null>` | The latest error, or `null` when cleared. |
+| `state$` | `Observable<ChatState>` | Combined snapshot of messages, status, and error. |
+
+#### Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `getState` | `() => ChatState` | Synchronously read the current state snapshot. |
+| `send` | `(content: string, meta?: Record<string, unknown>) => void` | Append a user message and trigger a completion. |
+| `retryLast` | `() => void` | Remove the last assistant message and re-run the completion. |
+| `cancel` | `() => void` | Abort the in-flight completion. Status moves to `cancelled`. |
+| `destroy` | `() => void` | Tear down all internal subscriptions. The controller must not be reused. |
+
+## Status lifecycle
+
+The controller follows a deterministic state machine:
+
+```
+idle ──▶ loading ──▶ streaming ──▶ idle
+                          │
+                          ├──▶ error
+                          │
+                          └──▶ cancelled
+```
+
+- **idle** — No request in flight. Ready to `send`.
+- **loading** — A request has been dispatched to the adapter but no chunk has arrived yet.
+- **streaming** — At least one chunk has been received; the assistant message is being built up.
+- **error** — The adapter Observable errored. Inspect `error$` for details. Call `retryLast()` to try again.
+- **cancelled** — The user called `cancel()` while loading or streaming.
+
+After **error** or **cancelled**, the status returns to **idle** once the user calls `send()` or `retryLast()`.
+
+## Types
+
+```ts
+type ChatRole = "user" | "assistant" | "system";
+
+interface ChatMessage {
+  id: string;
+  role: ChatRole;
+  content: string;
+  meta?: Record<string, unknown>;
+  createdAt: number;
+}
+
+type ChatStatus = "idle" | "loading" | "streaming" | "error" | "cancelled";
+
+interface ChatState {
+  messages: ChatMessage[];
+  status: ChatStatus;
+  error: Error | null;
+}
+
+type ChatChunk = string | { content: string; done?: boolean };
+
+interface ChatModelAdapter {
+  complete(request: { messages: ChatMessage[] }): Observable<ChatChunk>;
+}
+
+interface ChatController {
+  messages$: Observable<ChatMessage[]>;
+  status$: Observable<ChatStatus>;
+  error$: Observable<Error | null>;
+  state$: Observable<ChatState>;
+  getState(): ChatState;
+  send(content: string, meta?: Record<string, unknown>): void;
+  retryLast(): void;
+  cancel(): void;
+  destroy(): void;
+}
+```

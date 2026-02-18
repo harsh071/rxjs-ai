@@ -1,0 +1,213 @@
+---
+title: Stream Composition
+description: Leverage RxJS operators for advanced AI streaming patterns.
+---
+
+## Why stream composition matters
+
+Because rxjs-ai exposes every interaction as an **Observable**, you get the full power of RxJS operators for free. This page showcases practical patterns you can copy into your own applications.
+
+## Race two models
+
+Send the same prompt to two different adapters and use whichever responds first. The losing stream is automatically unsubscribed (and cancelled if the adapter supports teardown).
+
+```ts
+import { race } from "rxjs";
+import { createChatController, type ChatModelAdapter } from "rxjs-ai";
+
+function raceAdapters(a: ChatModelAdapter, b: ChatModelAdapter): ChatModelAdapter {
+  return {
+    complete(request) {
+      return race(a.complete(request), b.complete(request));
+    },
+  };
+}
+
+const chat = createChatController({
+  adapter: raceAdapters(openaiAdapter, anthropicAdapter),
+});
+
+chat.send("Explain quantum entanglement");
+```
+
+## Retry with exponential backoff
+
+Wrap an unreliable adapter so transient failures are retried automatically before the error surfaces to the UI.
+
+```ts
+import { retry, timer } from "rxjs";
+import { type ChatModelAdapter } from "rxjs-ai";
+
+function withRetry(
+  adapter: ChatModelAdapter,
+  maxRetries = 3,
+): ChatModelAdapter {
+  return {
+    complete(request) {
+      return adapter.complete(request).pipe(
+        retry({
+          count: maxRetries,
+          delay: (error, retryIndex) => {
+            const ms = Math.min(1000 * 2 ** retryIndex, 30_000);
+            console.warn(
+              `Retry ${retryIndex}/${maxRetries} in ${ms}ms:`,
+              error.message,
+            );
+            return timer(ms);
+          },
+        }),
+      );
+    },
+  };
+}
+
+const resilientAdapter = withRetry(myAdapter, 3);
+```
+
+## Throttle UI updates
+
+Streaming tokens arrive fast — often faster than the browser can repaint. Throttle emissions to keep the UI smooth without dropping the final value.
+
+```ts
+import { throttleTime, asyncScheduler } from "rxjs";
+
+// Emit at most once every 50ms, but always emit the trailing value
+const smoothMessages$ = chat.messages$.pipe(
+  throttleTime(50, asyncScheduler, { leading: true, trailing: true }),
+);
+
+smoothMessages$.subscribe((messages) => {
+  renderMessages(messages);
+});
+```
+
+## Cancel on navigation
+
+In a single-page application, the user may navigate away while a response is still streaming. Use `takeUntil` to tie the subscription to a navigation event.
+
+```ts
+import { Subject, takeUntil } from "rxjs";
+
+const destroy$ = new Subject<void>();
+
+chat.messages$
+  .pipe(takeUntil(destroy$))
+  .subscribe((messages) => renderMessages(messages));
+
+chat.status$
+  .pipe(takeUntil(destroy$))
+  .subscribe((status) => renderStatus(status));
+
+// When the user navigates away
+function onRouteLeave() {
+  chat.cancel(); // abort the in-flight request
+  destroy$.next(); // unsubscribe all listeners
+  destroy$.complete();
+  chat.destroy(); // clean up internals
+}
+```
+
+## Combine chat state with application store
+
+Merge AI state with your own application state stream (e.g. from a Redux-like store) so the UI has a single source of truth.
+
+```ts
+import { combineLatest, map } from "rxjs";
+
+interface AppState {
+  user: { name: string };
+  theme: "light" | "dark";
+}
+
+// Assume appState$ is an Observable<AppState> from your store
+const viewModel$ = combineLatest([
+  appState$,
+  chat.messages$,
+  chat.status$,
+]).pipe(
+  map(([app, messages, status]) => ({
+    userName: app.user.name,
+    theme: app.theme,
+    messages,
+    isStreaming: status === "streaming",
+  })),
+);
+
+viewModel$.subscribe((vm) => {
+  render(vm);
+});
+```
+
+## Debounce search input with switchMap
+
+For search-as-you-type UIs backed by an LLM, debounce the input and use `switchMap` so that each new keystroke cancels the previous in-flight request.
+
+```ts
+import { Subject, debounceTime, switchMap, catchError, of } from "rxjs";
+import { type ChatModelAdapter } from "rxjs-ai";
+
+const search$ = new Subject<string>();
+
+const results$ = search$.pipe(
+  debounceTime(300),
+  switchMap((query) => {
+    if (!query.trim()) return of([]);
+
+    // Build a one-shot message list for the adapter
+    const messages = [{ id: "1", role: "user" as const, content: query, createdAt: Date.now() }];
+    return adapter.complete({ messages }).pipe(
+      // Accumulate chunks into a single string
+      scan((acc, chunk) => {
+        const text = typeof chunk === "string" ? chunk : chunk.content;
+        return acc + text;
+      }, ""),
+      catchError((err) => {
+        console.error("Search failed:", err);
+        return of("Error: could not complete search.");
+      }),
+    );
+  }),
+);
+
+// Wire to an input element
+const input = document.querySelector<HTMLInputElement>("#search");
+input?.addEventListener("input", (e) => {
+  search$.next((e.target as HTMLInputElement).value);
+});
+
+results$.subscribe((result) => {
+  document.querySelector("#results")!.textContent = String(result);
+});
+```
+
+> **Note:** Remember to import `scan` from `rxjs` when using the accumulation pattern above.
+
+## Composing multiple patterns
+
+These patterns are building blocks. You can layer them freely:
+
+```ts
+import { race, retry, timer, throttleTime, takeUntil, asyncScheduler } from "rxjs";
+
+const composedAdapter: ChatModelAdapter = {
+  complete(request) {
+    return race(
+      adapterA.complete(request),
+      adapterB.complete(request),
+    ).pipe(
+      retry({ count: 2, delay: (_, i) => timer(1000 * 2 ** i) }),
+    );
+  },
+};
+
+const chat = createChatController({ adapter: composedAdapter });
+
+chat.messages$
+  .pipe(
+    throttleTime(50, asyncScheduler, { leading: true, trailing: true }),
+    takeUntil(destroy$),
+  )
+  .subscribe(renderMessages);
+```
+
+Race two models, retry on failure, throttle UI updates, and auto-unsubscribe on navigation — all in a handful of lines.

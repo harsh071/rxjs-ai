@@ -1,0 +1,116 @@
+---
+title: createStore
+description: Reactive state container with selectors and distinct emission.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Overview
+
+`createStore` creates a **BehaviorSubject-based reactive state container**. It provides a familiar get/set API while exposing the current state as an Observable stream. Selectors derived via `select()` emit only when the selected slice actually changes, keeping downstream subscribers efficient.
+
+## Import
+
+```ts
+import { createStore } from "rxjs-ai";
+```
+
+## Basic usage
+
+```ts
+import { createStore } from "rxjs-ai";
+
+interface CounterState {
+  count: number;
+  label: string;
+}
+
+const store = createStore<CounterState>({
+  count: 0,
+  label: "My Counter",
+});
+
+// Subscribe to the full state stream
+store.state$.subscribe((state) => {
+  console.log("State changed:", state);
+});
+
+// Read synchronously
+console.log(store.getState().count); // 0
+
+// Derive a selector – only emits when `count` changes
+const count$ = store.select((s) => s.count);
+count$.subscribe((count) => console.log("count:", count));
+
+// Patch a partial update
+store.patchState({ count: 1 });
+
+// Replace the entire state with a function-based updater
+store.setState((prev) => ({ ...prev, count: prev.count + 1 }));
+
+// Clean up when done
+store.destroy();
+```
+
+## API
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `state$` | `Observable<State>` | Emits the full state object on every change. Replays the current value to new subscribers. |
+| `getState()` | `() => State` | Returns a synchronous snapshot of the current state. |
+| `setState(updater)` | `(updater: State \| StateUpdater<State>) => void` | Replaces the entire state. Accepts a new state object or a callback that receives the previous state and returns the next state. |
+| `patchState(patch)` | `(patch: StatePatch<State>) => void` | Shallow-merges a partial object into the current state. Equivalent to `setState(prev => ({ ...prev, ...patch }))`. |
+| `select(selector, compare?)` | `<R>(selector: (state: State) => R, compare?: (a: R, b: R) => boolean) => Observable<R>` | Derives a projected Observable from the state. Uses `distinctUntilChanged` so subscribers only receive emissions when the selected value changes. |
+| `destroy()` | `() => void` | Completes the internal `BehaviorSubject` and all derived selectors. |
+
+## Advanced
+
+### Custom comparator for `select`
+
+By default, `select` uses referential equality (`===`) to determine whether the derived value has changed. You can supply a custom comparator for deep or structural equality checks:
+
+```ts
+import { isEqual } from "lodash-es";
+
+const todos$ = store.select((s) => s.todos, isEqual);
+```
+
+This is especially useful when the selector returns a new array or object reference on every emission but the contents remain the same.
+
+### Function-based updaters
+
+`setState` accepts either a plain state object or an updater function. Updater functions are the safest choice when the next state depends on the previous state:
+
+```ts
+// Plain object – replaces the entire state
+store.setState({ count: 10, label: "Reset" });
+
+// Updater function – derives next state from previous
+store.setState((prev) => ({
+  ...prev,
+  count: prev.count + 1,
+}));
+```
+
+## Types
+
+```ts
+/** The store instance returned by createStore. */
+type Store<State> = {
+  state$: Observable<State>;
+  getState: () => State;
+  setState: (updater: State | StateUpdater<State>) => void;
+  patchState: (patch: StatePatch<State>) => void;
+  select: <R>(
+    selector: (state: State) => R,
+    compare?: (a: R, b: R) => boolean,
+  ) => Observable<R>;
+  destroy: () => void;
+};
+
+/** A callback that receives the current state and returns the next state. */
+type StateUpdater<State> = (current: State) => State;
+
+/** A partial representation of the state used by patchState. */
+type StatePatch<State> = Partial<State>;
+```

@@ -1,0 +1,77 @@
+---
+title: Introduction
+description: What is rxjs-ai, why it exists, and how it compares to other AI SDKs.
+---
+
+import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+## What is rxjs-ai?
+
+**rxjs-ai** is a stream-first AI SDK built on [RxJS](https://rxjs.dev) for building AI-native applications. It gives you reusable, type-safe primitives that treat streaming as a first-class concept — not an afterthought.
+
+```ts
+import { createChatController, createViewModel } from 'rxjs-ai';
+
+const chat = createChatController({ model });
+
+// Every piece of state is an Observable
+chat.messages$.subscribe(console.log);
+chat.status$.subscribe(console.log);
+
+// Send a message — streaming happens automatically
+chat.send('Explain quantum computing');
+
+// Cancel mid-stream — one call, zero cleanup
+chat.cancel();
+```
+
+## The problem
+
+AI applications are **streaming-first** by nature. Tokens arrive one at a time, tool calls execute mid-stream, and users expect real-time feedback. Yet most AI SDKs bolt streaming onto a Promise-based foundation:
+
+- **Cancellation** requires manually wiring `AbortController` signals through every layer.
+- **Retry logic** means writing your own loops with exponential backoff.
+- **Combining streams** (race two models, merge tool calls) is either unsupported or ad-hoc.
+- **UI updates** flood the renderer with every single token, with no built-in throttling.
+- **State management** is left entirely to you — bring your own store, your own selectors, your own subscriptions.
+
+The result is boilerplate-heavy code that fights the underlying streaming reality of AI.
+
+## The solution
+
+rxjs-ai embraces the fact that AI is streaming and provides a small set of composable primitives:
+
+| Primitive | Purpose |
+|---|---|
+| `createStore` | Immutable state container with Observable selectors |
+| `createCommandBus` | Type-safe event bus for decoupled command handling |
+| `createAsyncController` | Manages any async Observable lifecycle (loading, error, cancel, retry) |
+| `createChatController` | Full chat lifecycle — messages, status, streaming, tool calls |
+| `createViewModel` | Derives read-only view state from one or more stores |
+| `useObservableValue` | React hook that subscribes to any Observable and returns its latest value |
+
+Each primitive is an Observable. That means the entire RxJS operator library — `retry`, `throttleTime`, `race`, `switchMap`, `combineLatest`, and hundreds more — works out of the box.
+
+## How it compares
+
+| Capability | rxjs-ai | Vercel AI SDK |
+|---|---|---|
+| **Stream type** | `Observable<T>` | `AsyncIterable<T>` |
+| **Cancellation** | `unsubscribe()` | `AbortController` |
+| **Retry** | `retry(3)` | Manual implementation |
+| **Throttle UI** | `throttleTime(50)` | `experimental_throttle` |
+| **Race models** | `race(gpt$, claude$)` | Not supported |
+| **State management** | Built-in (`createStore` + `createViewModel`) | Bring your own |
+| **Framework support** | Framework-agnostic (React adapter included) | React-first |
+
+<Aside type="tip">
+rxjs-ai does not replace your model provider SDK. It wraps any model behind a simple adapter interface, so you can use OpenAI, Anthropic, Google, or any other provider.
+</Aside>
+
+## Next steps
+
+<CardGrid>
+  <LinkCard title="Installation" href="/getting-started/installation/" description="Install rxjs-ai and its dependencies." />
+  <LinkCard title="Quick Start" href="/getting-started/quick-start/" description="Build your first streaming chat in 5 minutes." />
+  <LinkCard title="Why RxJS for AI?" href="/getting-started/why-rxjs-ai/" description="See the RxJS advantage with real code examples." />
+</CardGrid>

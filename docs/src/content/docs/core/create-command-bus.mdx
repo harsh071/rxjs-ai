@@ -1,0 +1,109 @@
+---
+title: createCommandBus
+description: Type-safe event bus for decoupled command routing.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## Overview
+
+`createCommandBus` creates a **Subject-based command bus** that routes typed command envelopes to subscribers. Each command is wrapped in a `CommandEnvelope` containing a `type` discriminator and a `payload`. The `ofType` operator lets you subscribe to a specific subset of commands with full type inference, keeping producers and consumers decoupled.
+
+## Import
+
+```ts
+import { createCommandBus } from "rxjs-ai";
+```
+
+## Basic usage
+
+### 1. Define a command map
+
+Create an interface that maps each command type string to its payload shape:
+
+```ts
+interface AppCommands {
+  "todo/add": { text: string };
+  "todo/remove": { id: string };
+  "todo/toggle": { id: string };
+  "notifications/show": { message: string; severity: "info" | "error" };
+}
+```
+
+### 2. Create the bus
+
+```ts
+const bus = createCommandBus<AppCommands>();
+```
+
+### 3. Dispatch commands
+
+```ts
+bus.dispatch("todo/add", { text: "Write docs" });
+bus.dispatch("notifications/show", {
+  message: "Item added",
+  severity: "info",
+});
+```
+
+### 4. Subscribe to specific command types
+
+```ts
+// Listen for a single command type
+bus.ofType("todo/add").subscribe(({ payload }) => {
+  console.log("Add todo:", payload.text);
+});
+
+// Listen for multiple command types at once
+bus.ofType("todo/remove", "todo/toggle").subscribe((envelope) => {
+  console.log(envelope.type, envelope.payload.id);
+});
+```
+
+### 5. Subscribe to all commands
+
+```ts
+bus.commands$.subscribe((envelope) => {
+  console.log(`[${envelope.type}]`, envelope.payload);
+});
+```
+
+### 6. Clean up
+
+```ts
+bus.destroy();
+```
+
+## API
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `commands$` | `Observable<CommandEnvelope<Commands>>` | Emits every command envelope dispatched through the bus. |
+| `dispatch(type, payload)` | `<T extends keyof Commands>(type: T, payload: Commands[T]) => void` | Dispatches a command with the given type and payload. The payload type is inferred from the command map. |
+| `ofType(...types)` | `<T extends keyof Commands>(...types: T[]) => Observable<CommandEnvelope<Pick<Commands, T>>>` | Returns an Observable that emits only command envelopes matching the specified type(s). Provides full type narrowing on the payload. |
+| `destroy()` | `() => void` | Completes the internal Subject and all derived streams. |
+
+## Types
+
+```ts
+/** A mapping from command type strings to their payload shapes. */
+type CommandMap = Record<string, unknown>;
+
+/** A typed envelope wrapping a dispatched command. */
+type CommandEnvelope<Commands extends CommandMap> = {
+  [K in keyof Commands]: {
+    type: K;
+    payload: Commands[K];
+  };
+}[keyof Commands];
+
+/** The command bus instance returned by createCommandBus. */
+type CommandBus<Commands extends CommandMap> = {
+  commands$: Observable<CommandEnvelope<Commands>>;
+  dispatch: <T extends keyof Commands>(type: T, payload: Commands[T]) => void;
+  ofType: <T extends keyof Commands>(
+    ...types: T[]
+  ) => Observable<CommandEnvelope<Pick<Commands, T>>>;
+  destroy: () => void;
+};
+```

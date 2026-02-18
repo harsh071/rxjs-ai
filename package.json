@@ -1,7 +1,7 @@
 {
   "name": "rxjs-ai",
   "version": "0.1.0",
-  "description": "A pragmatic AI-oriented layer on top of RxJS for streams, app state, and UI integration.",
+  "description": "A stream-first AI SDK built on RxJS. Framework-agnostic primitives for streaming, chat, state management, and UI integration.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,22 +17,43 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "keywords": [
     "rxjs",
     "ai",
+    "llm",
+    "streaming",
     "reactive",
+    "observable",
+    "chat",
+    "openai",
+    "anthropic",
     "state-management",
-    "streams"
+    "framework-agnostic",
+    "ai-sdk"
   ],
+  "author": "Harsh Patel",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/user/rxjs-ai.git"
+  },
+  "homepage": "https://github.com/user/rxjs-ai#readme",
+  "bugs": {
+    "url": "https://github.com/user/rxjs-ai/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "peerDependencies": {
     "react": ">=18",
     "rxjs": "^7.8.0"
