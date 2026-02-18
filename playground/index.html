@@ -15,6 +15,7 @@
         </div>
         <ul class="nav-list">
           <li><button class="nav-btn active" data-demo="chat">AI Chat</button></li>
+          <li><button class="nav-btn" data-demo="stream-text">Stream Text</button></li>
           <li><button class="nav-btn" data-demo="store">Reactive Store</button></li>
           <li><button class="nav-btn" data-demo="async">Async Controller</button></li>
           <li><button class="nav-btn" data-demo="commands">Command Bus</button></li>
@@ -50,6 +51,42 @@
                 <input id="chat-input" type="text" placeholder="Type a message..." autocomplete="off" />
                 <button type="submit" class="btn btn-primary">Send</button>
               </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stream Text Demo -->
+        <section id="demo-stream-text" class="demo-panel">
+          <div class="demo-header">
+            <h2>Stream Text</h2>
+            <p>Streaming text generation with <code>streamText()</code>. Shows <code>delta$</code> (individual chunks), <code>text$</code> (accumulated text), and raw <code>stream$</code> events from a mock <code>LanguageModel</code>.</p>
+          </div>
+          <div class="stream-text-container">
+            <div class="stream-status-bar">
+              <span class="status-indicator"></span>
+              <span id="stream-status-text">idle</span>
+            </div>
+            <form id="stream-text-form" class="chat-form">
+              <input id="stream-text-input" type="text" placeholder="Enter a prompt (try: hello, stream, observable, cancel)..." autocomplete="off" />
+              <button type="submit" class="btn btn-primary">Stream</button>
+            </form>
+            <div class="chat-actions" style="margin-top: 0.5rem;">
+              <button id="btn-stream-cancel" class="btn btn-secondary" disabled>Cancel</button>
+              <button id="btn-stream-clear" class="btn btn-ghost">Clear</button>
+            </div>
+            <div class="store-cards" style="margin-top: 1rem;">
+              <div class="card">
+                <h3>text$ (accumulated)</h3>
+                <div id="stream-text-output" class="stream-output"><span class="text-muted">Accumulated text will appear here...</span></div>
+              </div>
+              <div class="card">
+                <h3>delta$ (individual chunks)</h3>
+                <div id="stream-delta-output" class="stream-output"><span class="text-muted">Individual deltas will appear here...</span></div>
+              </div>
+            </div>
+            <div class="card" style="margin-top: 1rem;">
+              <h3>stream$ (raw events)</h3>
+              <div id="stream-events-output" class="event-log"><span class="text-muted">Stream events will appear here...</span></div>
             </div>
           </div>
         </section>

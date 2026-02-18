@@ -5,7 +5,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/index.ts", "src/ai/types.ts"],
+      exclude: ["src/**/index.ts", "src/ai/types.ts", "src/ai/language-model.ts"],
       thresholds: {
         statements: 90,
         branches: 85,

@@ -1,10 +1,15 @@
 import { BehaviorSubject, Observable, Subscription } from "rxjs";
 import { ChatChunk, ChatMessage, ChatModelAdapter, ChatState, ChatStatus } from "./types";
+import type { LanguageModel, Message } from "./language-model";
+import { streamText } from "./streamText";
 
 export interface CreateChatControllerOptions {
   now?: () => number;
   idGenerator?: () => string;
   initialMessages?: ChatMessage[];
+  system?: string | undefined;
+  temperature?: number | undefined;
+  maxTokens?: number | undefined;
 }
 
 export interface ChatController {
@@ -31,8 +36,19 @@ function chunkIsDone(chunk: ChatChunk): boolean {
   return typeof chunk === "string" ? false : Boolean(chunk.done);
 }
 
+function isLanguageModel(model: LanguageModel | ChatModelAdapter): model is LanguageModel {
+  return "doStream" in model && "doGenerate" in model && "modelId" in model;
+}
+
+function chatMessagesToMessages(chatMessages: ChatMessage[]): Message[] {
+  return chatMessages.map((msg) => ({
+    role: msg.role,
+    content: [{ type: "text" as const, text: msg.content }],
+  }));
+}
+
 export function createChatController(
-  model: ChatModelAdapter,
+  model: LanguageModel | ChatModelAdapter,
   options: CreateChatControllerOptions = {},
 ): ChatController {
   const now = options.now ?? Date.now;
@@ -110,6 +126,19 @@ export function createChatController(
     setStatus("idle");
   };
 
+  const appendDelta = (assistantMessageId: string, textDelta: string): void => {
+    if (textDelta.length > 0) {
+      setStatus("streaming");
+      setMessages(
+        messagesSubject.getValue().map((message) =>
+          message.id === assistantMessageId
+            ? { ...message, content: `${message.content}${textDelta}` }
+            : message,
+        ),
+      );
+    }
+  };
+
   const runCompletion = (baseMessages: ChatMessage[], assistantMessageId: string): void => {
     lastRequestMessages = [...baseMessages];
     releaseActiveRequest();
@@ -119,28 +148,20 @@ export function createChatController(
     const abortController = new AbortController();
     activeAbortController = abortController;
 
-    activeSubscription = model
-      .complete({
-        messages: baseMessages,
+    if (isLanguageModel(model)) {
+      const messages = chatMessagesToMessages(baseMessages);
+      const result = streamText({
+        model,
+        messages,
+        system: options.system,
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
         signal: abortController.signal,
-      })
-      .subscribe({
-        next: (chunk) => {
-          const textChunk = chunkToText(chunk);
-          if (textChunk.length > 0) {
-            setStatus("streaming");
-            setMessages(
-              messagesSubject.getValue().map((message) =>
-                message.id === assistantMessageId
-                  ? { ...message, content: `${message.content}${textChunk}` }
-                  : message,
-              ),
-            );
-          }
+      });
 
-          if (chunkIsDone(chunk)) {
-            finishRequest();
-          }
+      activeSubscription = result.delta$.subscribe({
+        next: (delta) => {
+          appendDelta(assistantMessageId, delta);
         },
         error: (error) => {
           setError(error);
@@ -151,6 +172,30 @@ export function createChatController(
           finishRequest();
         },
       });
+    } else {
+      activeSubscription = model
+        .complete({
+          messages: baseMessages,
+          signal: abortController.signal,
+        })
+        .subscribe({
+          next: (chunk) => {
+            appendDelta(assistantMessageId, chunkToText(chunk));
+
+            if (chunkIsDone(chunk)) {
+              finishRequest();
+            }
+          },
+          error: (error) => {
+            setError(error);
+            setStatus("error");
+            releaseActiveRequest();
+          },
+          complete: () => {
+            finishRequest();
+          },
+        });
+    }
   };
 
   const send = (content: string, meta?: Record<string, unknown>): void => {

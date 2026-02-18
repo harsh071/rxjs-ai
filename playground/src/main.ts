@@ -4,6 +4,7 @@ import { setup as setupStore } from "./demos/store";
 import { setup as setupAsync } from "./demos/async";
 import { setup as setupCommands } from "./demos/commands";
 import { setup as setupComposition } from "./demos/composition";
+import { setup as setupStreamText } from "./demos/stream-text";
 
 // ── Tab navigation ──
 const navButtons = document.querySelectorAll<HTMLButtonElement>(".nav-btn");
@@ -11,6 +12,7 @@ const panels = document.querySelectorAll<HTMLElement>(".demo-panel");
 
 const demoSetupMap: Record<string, { setup: () => void; initialized: boolean }> = {
   chat: { setup: setupChat, initialized: false },
+  "stream-text": { setup: setupStreamText, initialized: false },
   store: { setup: setupStore, initialized: false },
   async: { setup: setupAsync, initialized: false },
   commands: { setup: setupCommands, initialized: false },
