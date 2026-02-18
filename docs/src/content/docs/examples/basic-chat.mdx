@@ -50,7 +50,7 @@ const adapter: ChatModelAdapter = {
 ```ts
 import { createChatController } from "rxjs-ai";
 
-const chat = createChatController({ adapter });
+const chat = createChatController(adapter);
 ```
 
 ## Step 3 — Subscribe to messages and status
@@ -71,7 +71,7 @@ chat.messages$.subscribe((messages) => {
 
 // Log errors
 chat.error$.subscribe((err) => {
-  if (err) console.error(`\n[error] ${err.message}`);
+  if (err) console.error(`\n[error]`, err);
 });
 ```
 
@@ -136,11 +136,11 @@ const flakyAdapter: ChatModelAdapter = {
   },
 };
 
-const chat2 = createChatController({ adapter: flakyAdapter });
+const chat2 = createChatController(flakyAdapter);
 
 chat2.status$.subscribe((s) => console.log(`[status] ${s}`));
 chat2.error$.subscribe((e) => {
-  if (e) console.log(`[error] ${e.message}`);
+  if (e) console.log(`[error]`, e);
 });
 chat2.messages$.subscribe((msgs) => {
   const last = msgs.at(-1);
@@ -206,7 +206,7 @@ const adapter: ChatModelAdapter = {
 };
 
 // --- Controller ---
-const chat = createChatController({ adapter });
+const chat = createChatController(adapter);
 
 // --- Subscriptions ---
 chat.status$.subscribe((status) => console.log(`[status] ${status}`));

@@ -32,7 +32,7 @@ Get the current code published and documented. No new features — just make wha
 - [x] `0.12` — Scaffold docs site with Starlight (Astro) in `docs/` directory
 - [x] `0.13` — Create landing page with value prop, install command, and quick start
 - [x] `0.14` — Create "Getting Started" guide page
-- [x] `0.15` — Create API reference pages for each existing primitive (createStore, createCommandBus, createAsyncController, createChatController, createViewModel, useObservableValue)
+- [x] `0.15` — Create API reference pages for each existing primitive (createStore, createCommandBus, createAsyncController, createChatController, createViewModel)
 - [x] `0.16` — Create interactive example: basic chat with mock model
 - [ ] `0.17` — Deploy docs site (Vercel / Netlify / GitHub Pages)
 
@@ -236,9 +236,9 @@ Vector embeddings for RAG, semantic search, and similarity.
 
 First-class hooks for React, Vue, Svelte, Angular, and Solid. The core stays framework-agnostic.
 
-### React (enhance existing)
+### React
 
-- [ ] `7.1` — Add `useChat()` hook that wraps `createChatController` with full lifecycle
+- [ ] `7.1` — Create `@rxjs-ai/react` package with `useObservableValue()` and `useChat()` hooks
 - [ ] `7.2` — Add `useStreamText()` hook
 - [ ] `7.3` — Add `useObject()` hook for streaming structured data
 - [ ] `7.4` — Support SSR / React Server Components

@@ -34,9 +34,7 @@ src/
 │   ├── types.ts              # Shared AI types
 │   └── createChatController.ts   # Chat session management
 ├── ui/                     # UI integration layer
-│   ├── createViewModel.ts    # Stream projection
-│   └── react/
-│       └── useObservableValue.ts  # React hook
+│   └── createViewModel.ts    # Stream projection
 └── index.ts                # Public API entry point
 
 test/                       # Test files (mirrors src structure)

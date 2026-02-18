@@ -23,18 +23,12 @@ Modern AI apps are streaming by nature — tokens arrive one at a time, tool cal
 | **Throttle UI updates** | `experimental_throttle` | `throttleTime(50)` — standard operator |
 | **Race models** | Not supported | `race(modelA$, modelB$)` — native |
 | **State management** | Bring your own | Built-in `createStore` |
-| **Framework** | React-first | Framework-agnostic core, optional React/Vue/Svelte hooks |
+| **Framework** | React-first | Framework-agnostic core |
 
 ## Install
 
 ```bash
 npm install rxjs-ai rxjs
-```
-
-React hook (optional):
-
-```bash
-npm install react
 ```
 
 ## Quick Start
@@ -277,28 +271,6 @@ const vm$ = createViewModel(
 vm$.subscribe((vm) => console.log(vm.heading, vm.badge));
 ```
 
-#### `useObservableValue(source$, initialValue)` — React
-
-Bridges an RxJS Observable into React component state.
-
-```tsx
-import { useObservableValue } from "rxjs-ai/react";
-
-function ChatMessages({ chat }) {
-  const messages = useObservableValue(chat.messages$, []);
-  const status = useObservableValue(chat.status$, "idle");
-
-  return (
-    <div>
-      <p>Status: {status}</p>
-      {messages.map((msg) => (
-        <div key={msg.id}>{msg.role}: {msg.content}</div>
-      ))}
-    </div>
-  );
-}
-```
-
 ---
 
 ## The RxJS Advantage
@@ -341,7 +313,6 @@ import type {
 
 - **RxJS** `>=7.8.0` (peer dependency)
 - **TypeScript** `>=5.0` (recommended)
-- **React** `>=18` (optional, only for `rxjs-ai/react`)
 
 ## Development
 

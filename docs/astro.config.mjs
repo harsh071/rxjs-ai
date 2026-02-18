@@ -39,12 +39,6 @@ export default defineConfig({
 					],
 				},
 				{
-					label: 'UI',
-					items: [
-						{ label: 'React', slug: 'ui/react' },
-					],
-				},
-				{
 					label: 'Examples',
 					items: [
 						{ label: 'Basic Chat', slug: 'examples/basic-chat' },

@@ -19,47 +19,40 @@ import { createAsyncController } from "rxjs-ai";
 
 ```ts
 import { createAsyncController } from "rxjs-ai";
+import { Observable } from "rxjs";
 
 interface SearchResult {
   id: string;
   title: string;
 }
 
-const search = createAsyncController<string, SearchResult[]>();
+// The executor is passed at construction time.
+// It receives the request and an AbortSignal, and returns an Observable.
+const search = createAsyncController<string, SearchResult[]>(
+  (query, signal) =>
+    new Observable((subscriber) => {
+      fetch(`/api/search?q=${query}`, { signal })
+        .then((res) => res.json())
+        .then((data) => {
+          subscriber.next(data);
+          subscriber.complete();
+        })
+        .catch((err) => subscriber.error(err));
+    }),
+);
 
 // Subscribe to state changes
 search.state$.subscribe((state) => {
-  switch (state.status) {
-    case "idle":
-      console.log("Ready to search");
-      break;
-    case "loading":
-      console.log("Searching…");
-      break;
-    case "success":
-      console.log("Results:", state.data);
-      break;
-    case "error":
-      console.log("Failed:", state.error);
-      break;
-    case "cancelled":
-      console.log("Request was cancelled");
-      break;
-  }
+  console.log(state.status); // "idle" | "loading" | "success" | "error" | "cancelled"
+  console.log(state.data);   // SearchResult[] | null
+  console.log(state.error);  // unknown | null
 });
 
-// Execute a request — returns an Observable, but state$ is the
-// primary way to observe results.
-search.execute(async (query, signal) => {
-  const res = await fetch(`/api/search?q=${query}`, { signal });
-  return res.json();
-}, "rxjs");
+// Execute a request — just pass the request value
+search.execute("rxjs");
 
 // A second call auto-cancels the first
-search.execute(async (query, signal) => {
-  const res = await fetch(`/api/search?q=${query}`, { signal });
-  return res.json();
-}, "rxjs-ai");
+search.execute("rxjs-ai");
 
 // Manual cancellation
 search.cancel();
@@ -77,7 +70,7 @@ The controller tracks five discrete statuses throughout the request lifecycle:
 │ idle │────────────▶│ loading │──────────▶│ success │
 └──────┘             └─────────┘           └─────────┘
                         │   │
-               cancel() │   │ throw
+               cancel() │   │ error
                         ▼   ▼
                  ┌───────────┐  ┌───────┐
                  │ cancelled │  │ error │
@@ -104,12 +97,23 @@ This uses `switchMap` internally, so only the **latest** request's result is emi
 
 ## API
 
+### `createAsyncController(executor, options?)`
+
+Creates a new async controller with the given executor function.
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `executor` | `(request: Request, signal: AbortSignal) => Observable<Data>` | **Required.** The function that performs the async operation. Receives the request value and an `AbortSignal`, and must return an `Observable<Data>`. |
+| `options` | `CreateAsyncControllerOptions` | Optional configuration object. |
+
+### Returned handle -- `AsyncController`
+
 | Member | Signature | Description |
 | --- | --- | --- |
-| `state$` | `Observable<AsyncState<TResult>>` | Emits the current async state on every transition. Replays the latest value to new subscribers. |
-| `execute(handler, request)` | `(handler: (request: TRequest, signal: AbortSignal) => Promise<TResult>, request: TRequest) => void` | Triggers a new async operation. If a previous operation is in-flight it is automatically cancelled. The `signal` parameter is wired to an internal `AbortController`. |
-| `cancel()` | `() => void` | Manually cancels the current in-flight request and transitions the state to `cancelled`. |
-| `destroy()` | `() => void` | Cancels any in-flight request, completes all internal Subjects, and releases resources. |
+| `state$` | `Observable<AsyncState<Data, ErrorType>>` | Emits the current async state on every transition. Replays the latest value to new subscribers. |
+| `execute` | `(request: Request) => void` | Triggers a new async operation by passing the request to the executor. If a previous operation is in-flight it is automatically cancelled. |
+| `cancel` | `() => void` | Manually cancels the current in-flight request and transitions the state to `cancelled`. |
+| `destroy` | `() => void` | Cancels any in-flight request, completes all internal Subjects, and releases resources. |
 
 ## Types
 
@@ -118,21 +122,18 @@ This uses `switchMap` internally, so only the **latest** request's result is emi
 type AsyncStatus = "idle" | "loading" | "success" | "error" | "cancelled";
 
 /** The state emitted by the controller's state$ Observable. */
-type AsyncState<TResult> =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; data: TResult }
-  | { status: "error"; error: unknown }
-  | { status: "cancelled" };
+interface AsyncState<Data, ErrorType = unknown> {
+  status: AsyncStatus;
+  data: Data | null;
+  error: ErrorType | null;
+  updatedAt: number | null;
+}
 
 /** The controller instance returned by createAsyncController. */
-type AsyncController<TRequest, TResult> = {
-  state$: Observable<AsyncState<TResult>>;
-  execute: (
-    handler: (request: TRequest, signal: AbortSignal) => Promise<TResult>,
-    request: TRequest,
-  ) => void;
+interface AsyncController<Request, Data, ErrorType = unknown> {
+  state$: Observable<AsyncState<Data, ErrorType>>;
+  execute: (request: Request) => void;
   cancel: () => void;
   destroy: () => void;
-};
+}
 ```

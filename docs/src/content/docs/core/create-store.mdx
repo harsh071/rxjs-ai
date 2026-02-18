@@ -59,7 +59,7 @@ store.destroy();
 | `state$` | `Observable<State>` | Emits the full state object on every change. Replays the current value to new subscribers. |
 | `getState()` | `() => State` | Returns a synchronous snapshot of the current state. |
 | `setState(updater)` | `(updater: State \| StateUpdater<State>) => void` | Replaces the entire state. Accepts a new state object or a callback that receives the previous state and returns the next state. |
-| `patchState(patch)` | `(patch: StatePatch<State>) => void` | Shallow-merges a partial object into the current state. Equivalent to `setState(prev => ({ ...prev, ...patch }))`. |
+| `patchState(patch)` | `(patch: StatePatch<State>) => void` | Shallow-merges a partial object into the current state. Accepts a partial object or a function that receives the previous state and returns a partial object. |
 | `select(selector, compare?)` | `<R>(selector: (state: State) => R, compare?: (a: R, b: R) => boolean) => Observable<R>` | Derives a projected Observable from the state. Uses `distinctUntilChanged` so subscribers only receive emissions when the selected value changes. |
 | `destroy()` | `() => void` | Completes the internal `BehaviorSubject` and all derived selectors. |
 
@@ -111,6 +111,8 @@ type Store<State> = {
 /** A callback that receives the current state and returns the next state. */
 type StateUpdater<State> = (current: State) => State;
 
-/** A partial representation of the state used by patchState. */
-type StatePatch<State> = Partial<State>;
+/** A partial representation of the state used by patchState. Accepts a partial object or a function that returns one. */
+type StatePatch<State extends object> =
+  | Partial<State>
+  | ((previousState: State) => Partial<State>);
 ```

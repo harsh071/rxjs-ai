@@ -12,7 +12,7 @@ import { Tabs, TabItem } from "@astrojs/starlight/components";
 ```ts
 import { createChatController } from "rxjs-ai";
 
-const chat = createChatController({ adapter: myAdapter });
+const chat = createChatController(myAdapter);
 ```
 
 ## ChatModelAdapter interface
@@ -21,11 +21,16 @@ Before creating a controller you need an **adapter** — an object with a single
 
 ```ts
 interface ChatModelAdapter {
-  complete(request: { messages: ChatMessage[] }): Observable<ChatChunk>;
+  complete(request: ChatModelRequest): Observable<ChatChunk>;
+}
+
+interface ChatModelRequest {
+  messages: ChatMessage[];
+  signal: AbortSignal;
 }
 ```
 
-The `complete` method receives the full conversation history and must return an `Observable` that emits one or more **chunks** as the model responds.
+The `complete` method receives the full conversation history and an `AbortSignal` for cancellation, and must return an `Observable` that emits one or more **chunks** as the model responds.
 
 ### ChatChunk
 
@@ -45,14 +50,14 @@ type ChatChunk = string | { content: string; done?: boolean };
 ```ts
 import { createChatController } from "rxjs-ai";
 
-const adapter = {
-  complete({ messages }) {
+const adapter: ChatModelAdapter = {
+  complete({ messages, signal }) {
     // Return an Observable<ChatChunk>
-    return myLlmStream(messages);
+    return myLlmStream(messages, signal);
   },
 };
 
-const chat = createChatController({ adapter });
+const chat = createChatController(adapter);
 
 // Subscribe to state changes
 chat.messages$.subscribe((msgs) => console.log("Messages:", msgs));
@@ -64,11 +69,17 @@ chat.send("Hello, AI!");
 
 ## API reference
 
-### Options
+### Arguments
+
+| Argument | Type | Description |
+|---|---|---|
+| `model` | `ChatModelAdapter` | **Required.** The model adapter to use for completions. Passed as the first positional argument. |
+| `options` | `CreateChatControllerOptions` | Optional configuration object (see below). |
+
+### Options (`CreateChatControllerOptions`)
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `adapter` | `ChatModelAdapter` | **required** | The model adapter to use for completions. |
 | `now` | `() => number` | `Date.now` | Clock function used for message timestamps. |
 | `idGenerator` | `() => string` | internal nanoid | Custom ID generator for message IDs. |
 | `initialMessages` | `ChatMessage[]` | `[]` | Pre-populate the conversation history. |
@@ -81,7 +92,7 @@ chat.send("Hello, AI!");
 |---|---|---|
 | `messages$` | `Observable<ChatMessage[]>` | Current message list. Emits after every mutation. |
 | `status$` | `Observable<ChatStatus>` | Lifecycle status of the controller. |
-| `error$` | `Observable<Error \| null>` | The latest error, or `null` when cleared. |
+| `error$` | `Observable<unknown \| null>` | The latest error, or `null` when cleared. |
 | `state$` | `Observable<ChatState>` | Combined snapshot of messages, status, and error. |
 
 #### Methods
@@ -117,14 +128,14 @@ After **error** or **cancelled**, the status returns to **idle** once the user c
 ## Types
 
 ```ts
-type ChatRole = "user" | "assistant" | "system";
+type ChatRole = "system" | "user" | "assistant" | "tool";
 
 interface ChatMessage {
   id: string;
   role: ChatRole;
   content: string;
-  meta?: Record<string, unknown>;
   createdAt: number;
+  meta?: Record<string, unknown>;
 }
 
 type ChatStatus = "idle" | "loading" | "streaming" | "error" | "cancelled";
@@ -132,19 +143,24 @@ type ChatStatus = "idle" | "loading" | "streaming" | "error" | "cancelled";
 interface ChatState {
   messages: ChatMessage[];
   status: ChatStatus;
-  error: Error | null;
+  error: unknown | null;
 }
 
 type ChatChunk = string | { content: string; done?: boolean };
 
+interface ChatModelRequest {
+  messages: ChatMessage[];
+  signal: AbortSignal;
+}
+
 interface ChatModelAdapter {
-  complete(request: { messages: ChatMessage[] }): Observable<ChatChunk>;
+  complete(request: ChatModelRequest): Observable<ChatChunk>;
 }
 
 interface ChatController {
   messages$: Observable<ChatMessage[]>;
   status$: Observable<ChatStatus>;
-  error$: Observable<Error | null>;
+  error$: Observable<unknown | null>;
   state$: Observable<ChatState>;
   getState(): ChatState;
   send(content: string, meta?: Record<string, unknown>): void;

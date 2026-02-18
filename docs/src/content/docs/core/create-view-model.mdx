@@ -47,11 +47,11 @@ vm$.subscribe((vm) => {
 });
 ```
 
-The returned `Observable` only emits when the **projected output** changes, preventing unnecessary re-renders or side-effects downstream.
+The returned `Observable` only emits when the **projected output** changes, preventing unnecessary side-effects downstream.
 
 ## Custom comparator
 
-By default, `createViewModel` uses referential equality (`===`) on the projected result to determine whether a new emission should be sent to subscribers. For projected objects (which create a new reference on every emission), you should provide a custom comparator:
+By default, `createViewModel` uses `Object.is` on the projected result to determine whether a new emission should be sent to subscribers. For projected objects (which create a new reference on every emission), you should provide a custom comparator:
 
 ```ts
 import { isEqual } from "lodash-es";
@@ -90,21 +90,22 @@ const vm$ = createViewModel(
 
 ```ts
 function createViewModel<
-  Sources extends Record<string, Observable<any>>,
+  Sources extends ObservableMap,
   ViewModel,
 >(
   sources: Sources,
-  projector: (
-    values: { [K in keyof Sources]: ObservedValueOf<Sources[K]> },
-  ) => ViewModel,
-  compare?: (previous: ViewModel, current: ViewModel) => boolean,
+  projector: (values: ObservableValues<Sources>) => ViewModel,
+  compare: (previous: ViewModel, current: ViewModel) => boolean = Object.is,
 ): Observable<ViewModel>;
+
+// where
+type ObservableMap = Record<string, Observable<unknown>>;
 ```
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `sources` | `Record<string, Observable<any>>` | A named map of Observable sources. Each key becomes a property on the object passed to the projector. |
-| `projector` | `(values) => ViewModel` | A pure function that receives the latest values from all sources and returns the projected view model shape. |
-| `compare?` | `(previous: ViewModel, current: ViewModel) => boolean` | Optional equality function used by `distinctUntilChanged`. Defaults to `===`. Return `true` when the two values should be considered equal (suppressing the emission). |
+| `sources` | `ObservableMap` (`Record<string, Observable<unknown>>`) | A named map of Observable sources. Each key becomes a property on the object passed to the projector. |
+| `projector` | `(values: ObservableValues<Sources>) => ViewModel` | A pure function that receives the latest values from all sources and returns the projected view model shape. |
+| `compare` | `(previous: ViewModel, current: ViewModel) => boolean` | Equality function used by `distinctUntilChanged`. Defaults to `Object.is`. Return `true` when the two values should be considered equal (suppressing the emission). |
 
 **Returns:** `Observable<ViewModel>` -- an Observable that emits the projected view model whenever any source emits and the projected output differs from the previous emission.

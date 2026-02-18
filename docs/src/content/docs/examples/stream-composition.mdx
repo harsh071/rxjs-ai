@@ -23,9 +23,9 @@ function raceAdapters(a: ChatModelAdapter, b: ChatModelAdapter): ChatModelAdapte
   };
 }
 
-const chat = createChatController({
-  adapter: raceAdapters(openaiAdapter, anthropicAdapter),
-});
+const chat = createChatController(
+  raceAdapters(openaiAdapter, anthropicAdapter),
+);
 
 chat.send("Explain quantum entanglement");
 ```
@@ -143,7 +143,7 @@ viewModel$.subscribe((vm) => {
 For search-as-you-type UIs backed by an LLM, debounce the input and use `switchMap` so that each new keystroke cancels the previous in-flight request.
 
 ```ts
-import { Subject, debounceTime, switchMap, catchError, of } from "rxjs";
+import { Subject, debounceTime, switchMap, scan, catchError, of } from "rxjs";
 import { type ChatModelAdapter } from "rxjs-ai";
 
 const search$ = new Subject<string>();
@@ -155,7 +155,8 @@ const results$ = search$.pipe(
 
     // Build a one-shot message list for the adapter
     const messages = [{ id: "1", role: "user" as const, content: query, createdAt: Date.now() }];
-    return adapter.complete({ messages }).pipe(
+    const ac = new AbortController();
+    return adapter.complete({ messages, signal: ac.signal }).pipe(
       // Accumulate chunks into a single string
       scan((acc, chunk) => {
         const text = typeof chunk === "string" ? chunk : chunk.content;
@@ -180,7 +181,7 @@ results$.subscribe((result) => {
 });
 ```
 
-> **Note:** Remember to import `scan` from `rxjs` when using the accumulation pattern above.
+> **Note:** The `scan` operator is imported from `rxjs` and used to accumulate streamed chunks into a single string.
 
 ## Composing multiple patterns
 
@@ -200,7 +201,7 @@ const composedAdapter: ChatModelAdapter = {
   },
 };
 
-const chat = createChatController({ adapter: composedAdapter });
+const chat = createChatController(composedAdapter);
 
 chat.messages$
   .pipe(

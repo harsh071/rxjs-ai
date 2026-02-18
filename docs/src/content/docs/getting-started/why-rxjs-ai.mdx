@@ -161,17 +161,20 @@ import { createStore, createViewModel } from 'rxjs-ai';
 // Define your store
 const store = createStore({ count: 0, name: 'World' });
 
-// Derive a view model with fine-grained selectors
-const vm = createViewModel({
-  count: store.select((s) => s.count),
-  greeting: store.select((s) => `Hello, ${s.name}!`),
-});
+// Derive a view model with fine-grained selectors and a projector function
+const vm$ = createViewModel(
+  {
+    count: store.select((s) => s.count),
+    greeting: store.select((s) => `Hello, ${s.name}!`),
+  },
+  ({ count, greeting }) => ({ count, greeting }),
+);
 
 // Subscribe to the combined view
-vm.state$.subscribe(console.log);
+vm$.subscribe(console.log);
 // { count: 0, greeting: 'Hello, World!' }
 
-store.update((s) => ({ ...s, count: s.count + 1 }));
+store.setState((s) => ({ ...s, count: s.count + 1 }));
 // { count: 1, greeting: 'Hello, World!' }
 ```
 
@@ -181,27 +184,7 @@ Because everything is an Observable, your stores, view models, and chat controll
 
 The core of rxjs-ai has zero framework dependencies. It works in Node.js scripts, Deno, Bun, web workers, and any frontend framework.
 
-For React, rxjs-ai ships a thin adapter:
-
-```tsx
-import { useObservableValue } from 'rxjs-ai/react';
-
-function ChatView({ chat }) {
-  const messages = useObservableValue(chat.messages$, []);
-  const status = useObservableValue(chat.status$, 'idle');
-
-  return (
-    <div>
-      {messages.map((msg) => (
-        <p key={msg.id}>{msg.content}</p>
-      ))}
-      {status === 'streaming' && <p>Thinking...</p>}
-    </div>
-  );
-}
-```
-
-Vue, Svelte, Angular, Solid — any framework that can subscribe to an Observable (all of them) works with rxjs-ai out of the box.
+Framework adapters for React, Vue, Svelte, and Angular are coming soon. In the meantime, any framework that can subscribe to an Observable works with rxjs-ai out of the box.
 
 ## Next steps
 

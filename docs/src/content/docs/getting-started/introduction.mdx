@@ -12,7 +12,7 @@ import { Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
 ```ts
 import { createChatController, createViewModel } from 'rxjs-ai';
 
-const chat = createChatController({ model });
+const chat = createChatController(model);
 
 // Every piece of state is an Observable
 chat.messages$.subscribe(console.log);
@@ -48,7 +48,6 @@ rxjs-ai embraces the fact that AI is streaming and provides a small set of compo
 | `createAsyncController` | Manages any async Observable lifecycle (loading, error, cancel, retry) |
 | `createChatController` | Full chat lifecycle — messages, status, streaming, tool calls |
 | `createViewModel` | Derives read-only view state from one or more stores |
-| `useObservableValue` | React hook that subscribes to any Observable and returns its latest value |
 
 Each primitive is an Observable. That means the entire RxJS operator library — `retry`, `throttleTime`, `race`, `switchMap`, `combineLatest`, and hundreds more — works out of the box.
 
@@ -62,7 +61,7 @@ Each primitive is an Observable. That means the entire RxJS operator library —
 | **Throttle UI** | `throttleTime(50)` | `experimental_throttle` |
 | **Race models** | `race(gpt$, claude$)` | Not supported |
 | **State management** | Built-in (`createStore` + `createViewModel`) | Bring your own |
-| **Framework support** | Framework-agnostic (React adapter included) | React-first |
+| **Framework support** | Framework-agnostic | React-first |
 
 <Aside type="tip">
 rxjs-ai does not replace your model provider SDK. It wraps any model behind a simple adapter interface, so you can use OpenAI, Anthropic, Google, or any other provider.

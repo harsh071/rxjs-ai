@@ -35,45 +35,13 @@ import { Aside, Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
 
 `rxjs` is a peer dependency — you must install it alongside `rxjs-ai`.
 
-## Optional: React bindings
-
-If you are building a React application, install React as well:
-
-<Tabs>
-  <TabItem label="npm">
-    ```bash
-    npm install react
-    ```
-  </TabItem>
-  <TabItem label="pnpm">
-    ```bash
-    pnpm add react
-    ```
-  </TabItem>
-  <TabItem label="yarn">
-    ```bash
-    yarn add react
-    ```
-  </TabItem>
-</Tabs>
-
-Then import hooks from the React sub-path:
-
-```ts
-import { useObservableValue } from 'rxjs-ai/react';
-```
-
 ## Package exports
-
-rxjs-ai ships two entry points:
 
 | Import path | What you get |
 |---|---|
 | `rxjs-ai` | Core primitives, AI controllers, and UI utilities — `createStore`, `createCommandBus`, `createAsyncController`, `createChatController`, `createViewModel` |
-| `rxjs-ai/react` | React hooks — `useObservableValue` |
 
 ```ts
-// Core — works everywhere
 import {
   createStore,
   createCommandBus,
@@ -81,9 +49,6 @@ import {
   createChatController,
   createViewModel,
 } from 'rxjs-ai';
-
-// React — requires React 18+
-import { useObservableValue } from 'rxjs-ai/react';
 ```
 
 ## TypeScript
@@ -92,12 +57,23 @@ All types are exported directly from the main entry point. No separate `@types` 
 
 ```ts
 import type {
-  ChatController,
-  AsyncController,
   Store,
-  ViewModel,
-  ModelAdapter,
+  StateUpdater,
+  StatePatch,
+  CommandBus,
+  CommandMap,
+  CommandEnvelope,
+  AsyncController,
+  AsyncState,
+  AsyncStatus,
+  ChatController,
+  ChatModelAdapter,
+  ChatModelRequest,
   ChatMessage,
+  ChatState,
+  ChatStatus,
+  ChatRole,
+  ChatChunk,
 } from 'rxjs-ai';
 ```
 
