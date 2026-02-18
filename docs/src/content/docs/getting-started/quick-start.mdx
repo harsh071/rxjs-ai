@@ -13,39 +13,24 @@ npm install rxjs-ai rxjs
 
 ## 2. Create a Model Adapter
 
-A model adapter is any object with a `complete` method that accepts a request with `messages` and `signal`, and returns an `Observable` of text chunks. Here is a simple echo model that streams words back one at a time:
+A model adapter is any object with a `complete` method that returns an `Observable` of text chunks. Here is the simplest possible adapter — it echoes back whatever the user sent:
 
 ```ts
-import { Observable } from "rxjs";
+import { of } from "rxjs";
 import type { ChatModelAdapter } from "rxjs-ai";
 
 const echoModel: ChatModelAdapter = {
-  complete: ({ messages, signal }) => {
-    const lastMessage = messages[messages.length - 1];
-    const words = `Echo: ${lastMessage?.content ?? ""}`.split(" ");
-
-    return new Observable<string>((subscriber) => {
-      let i = 0;
-      const id = setInterval(() => {
-        if (signal.aborted) return clearInterval(id);
-        if (i < words.length) {
-          subscriber.next(words[i] + " ");
-          i++;
-        } else {
-          clearInterval(id);
-          subscriber.complete();
-        }
-      }, 100);
-
-      // Cleanup on unsubscribe — cancellation is free
-      return () => clearInterval(id);
-    });
+  complete: ({ messages }) => {
+    const last = messages[messages.length - 1];
+    return of(`Echo: ${last?.content ?? ""}`);
   },
 };
 ```
 
+That is all you need. In production you would swap this for a real LLM — see [Model Adapters](/ai/model-adapters/) for streaming and fetch-based examples.
+
 :::tip
-The teardown function returned from the Observable constructor runs automatically when the subscriber unsubscribes. This is how rxjs-ai gets cancellation for free — no `AbortController` needed on your side.
+Want to see streaming in action? Replace `of(...)` with an Observable that emits chunks over time. The [Model Adapters](/ai/model-adapters/) page has a streaming adapter example with interval-based token dripping and automatic cancellation teardown.
 :::
 
 ## 3. Create a Chat Controller
@@ -129,30 +114,15 @@ chat.destroy();
 Here is the complete script in one block:
 
 ```ts
-import { Observable } from "rxjs";
+import { of } from "rxjs";
 import { createChatController } from "rxjs-ai";
 import type { ChatModelAdapter } from "rxjs-ai";
 
 // 1. Model adapter
 const echoModel: ChatModelAdapter = {
-  complete: ({ messages, signal }) => {
-    const lastMessage = messages[messages.length - 1];
-    const words = `Echo: ${lastMessage?.content ?? ""}`.split(" ");
-
-    return new Observable<string>((subscriber) => {
-      let i = 0;
-      const id = setInterval(() => {
-        if (signal.aborted) return clearInterval(id);
-        if (i < words.length) {
-          subscriber.next(words[i] + " ");
-          i++;
-        } else {
-          clearInterval(id);
-          subscriber.complete();
-        }
-      }, 100);
-      return () => clearInterval(id);
-    });
+  complete: ({ messages }) => {
+    const last = messages[messages.length - 1];
+    return of(`Echo: ${last?.content ?? ""}`);
   },
 };
 
