@@ -33,7 +33,7 @@ AI applications are **streaming-first** by nature. Tokens arrive one at a time, 
 - **Retry logic** means writing your own loops with exponential backoff.
 - **Combining streams** (race two models, merge tool calls) is either unsupported or ad-hoc.
 - **UI updates** flood the renderer with every single token, with no built-in throttling.
-- **State management** is left entirely to you — bring your own store, your own selectors, your own subscriptions.
+- **Common patterns** like reactive state and event routing require manual `BehaviorSubject`/`Subject` wiring every time.
 
 The result is boilerplate-heavy code that fights the underlying streaming reality of AI.
 
@@ -43,7 +43,7 @@ rxjs-ai embraces the fact that AI is streaming and provides a small set of compo
 
 | Primitive | Purpose |
 |---|---|
-| `createStore` | Immutable state container with Observable selectors |
+| `createStore` | Reactive state container with Observable selectors |
 | `createCommandBus` | Type-safe event bus for decoupled command handling |
 | `createAsyncController` | Manages any async Observable lifecycle (loading, error, cancel, retry) |
 | `createChatController` | Full chat lifecycle — messages, status, streaming, tool calls |
@@ -60,7 +60,7 @@ Each primitive is an Observable. That means the entire RxJS operator library —
 | **Retry** | `retry(3)` | Manual implementation |
 | **Throttle UI** | `throttleTime(50)` | `experimental_throttle` |
 | **Race models** | `race(gpt$, claude$)` | Not supported |
-| **State management** | Built-in (`createStore` + `createViewModel`) | Bring your own |
+| **Reactive primitives** | Built-in (`createStore`, `createCommandBus`, `createViewModel`) | Bring your own |
 | **Framework support** | Framework-agnostic | React-first |
 
 <Aside type="tip">

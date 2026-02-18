@@ -22,7 +22,7 @@ Modern AI apps are streaming by nature — tokens arrive one at a time, tool cal
 | **Retry** | Manual | `retry(3)`, `retryWhen(...)` — built into the stream |
 | **Throttle UI updates** | `experimental_throttle` | `throttleTime(50)` — standard operator |
 | **Race models** | Not supported | `race(modelA$, modelB$)` — native |
-| **State management** | Bring your own | Built-in `createStore` |
+| **Reactive primitives** | Bring your own | Built-in `createStore`, `createCommandBus` |
 | **Framework** | React-first | Framework-agnostic core |
 
 ## Install

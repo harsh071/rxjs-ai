@@ -151,9 +151,9 @@ const response = await fetch('/api/chat', { signal: controller.signal });
 controller.abort();
 ```
 
-## State management built in
+## Ergonomic primitives on top of RxJS
 
-rxjs-ai includes `createStore` for state and `createViewModel` for derived view state. No external state library needed:
+rxjs-ai includes `createStore` for reactive state and `createViewModel` for derived view state — thin layers over `BehaviorSubject` and `combineLatest` that save you the boilerplate:
 
 ```ts
 import { createStore, createViewModel } from 'rxjs-ai';
@@ -190,7 +190,7 @@ Framework adapters for React, Vue, Svelte, and Angular are coming soon. In the m
 
 <CardGrid>
   <LinkCard title="Quick Start" href="/getting-started/quick-start/" description="Build your first streaming chat in 5 minutes." />
-  <LinkCard title="createStore" href="/core/create-store/" description="State management primitive." />
+  <LinkCard title="createStore" href="/core/create-store/" description="Reactive state primitive." />
   <LinkCard title="createChatController" href="/ai/create-chat-controller/" description="Full chat lifecycle controller." />
   <LinkCard title="createViewModel" href="/ui/create-view-model/" description="Derived view state from Observables." />
 </CardGrid>

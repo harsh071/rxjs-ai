@@ -1,7 +1,7 @@
 {
   "name": "rxjs-ai",
   "version": "0.1.0",
-  "description": "A stream-first AI SDK built on RxJS. Framework-agnostic primitives for streaming, chat, state management, and UI integration.",
+  "description": "A stream-first AI SDK built on RxJS. Framework-agnostic primitives for streaming, chat, reactive state, and UI integration.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
