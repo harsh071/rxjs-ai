@@ -5,7 +5,7 @@ A stream-first AI SDK built on [RxJS](https://github.com/ReactiveX/rxjs). Framew
 > Think of it as the [Vercel AI SDK](https://ai-sdk.dev) — but Observable-native, composable, and zero framework lock-in.
 
 [![npm version](https://img.shields.io/npm/v/rxjs-ai.svg)](https://www.npmjs.com/package/rxjs-ai)
-[![license](https://img.shields.io/npm/l/rxjs-ai.svg)](https://github.com/user/rxjs-ai/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/rxjs-ai.svg)](https://github.com/harsh071/rxjs-ai/blob/main/LICENSE)
 
 ## Why rxjs-ai?
 

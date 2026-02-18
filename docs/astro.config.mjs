@@ -7,9 +7,9 @@ export default defineConfig({
 		starlight({
 			title: 'rxjs-ai',
 			description: 'A stream-first AI SDK built on RxJS.',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/user/rxjs-ai' }],
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/harsh071/rxjs-ai' }],
 			editLink: {
-				baseUrl: 'https://github.com/user/rxjs-ai/edit/main/docs/',
+				baseUrl: 'https://github.com/harsh071/rxjs-ai/edit/main/docs/',
 			},
 			customCss: [],
 			sidebar: [

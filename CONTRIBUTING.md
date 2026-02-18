@@ -6,7 +6,7 @@ Thanks for your interest in contributing! This guide covers everything you need 
 
 ```bash
 # Clone the repo
-git clone https://github.com/user/rxjs-ai.git
+git clone https://github.com/harsh071/rxjs-ai.git
 cd rxjs-ai
 
 # Install dependencies
