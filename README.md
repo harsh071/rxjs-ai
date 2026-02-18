@@ -7,6 +7,8 @@ A stream-first AI SDK built on [RxJS](https://github.com/ReactiveX/rxjs). Framew
 [![npm version](https://img.shields.io/npm/v/rxjs-ai.svg)](https://www.npmjs.com/package/rxjs-ai)
 [![license](https://img.shields.io/npm/l/rxjs-ai.svg)](https://github.com/harsh071/rxjs-ai/blob/main/LICENSE)
 
+**[Playground](https://rxjs-ai-playground.vercel.app/)** — try it live in the browser.
+
 ## Why rxjs-ai?
 
 Modern AI apps are streaming by nature — tokens arrive one at a time, tool calls fire in parallel, models race against each other, and users cancel mid-stream. RxJS was built for exactly this, but teams reinvent the same patterns every time.
