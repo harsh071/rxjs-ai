@@ -19,11 +19,10 @@ API rate limits and transient failures are a fact of life. With RxJS, retry logi
 
 ```ts
 import { retry, timer } from 'rxjs';
-
-chat.send('Summarize this document');
+import { streamText } from 'rxjs-ai';
 
 // If the model errors, retry up to 3 times with exponential backoff
-model.stream(messages).pipe(
+streamText({ model, messages }).text$.pipe(
   retry({
     count: 3,
     delay: (error, retryCount) => timer(1000 * Math.pow(2, retryCount)),
@@ -39,12 +38,13 @@ Want the fastest response? Race two models and take whichever finishes first:
 
 ```ts
 import { race } from 'rxjs';
+import { streamText } from 'rxjs-ai';
 
-const gpt$ = gptModel.stream(messages);
-const claude$ = claudeModel.stream(messages);
+const gpt$ = streamText({ model: gptModel, messages }).text$;
+const claude$ = streamText({ model: claudeModel, messages }).text$;
 
-race(gpt$, claude$).subscribe((token) => {
-  console.log(token);
+race(gpt$, claude$).subscribe((text) => {
+  console.log(text);
 });
 ```
 
@@ -116,15 +116,16 @@ For search-as-you-type against an AI model, debounce the input to avoid hammerin
 
 ```ts
 import { debounceTime, switchMap, fromEvent } from 'rxjs';
+import { streamText } from 'rxjs-ai';
 
 fromEvent(searchInput, 'input').pipe(
   debounceTime(300),
   switchMap((event) => {
     const query = (event.target as HTMLInputElement).value;
-    return model.stream([{ role: 'user', content: query }]);
+    return streamText({ model, messages: [{ role: 'user', content: query }] }).text$;
   })
-).subscribe((token) => {
-  appendToResults(token);
+).subscribe((text) => {
+  appendToResults(text);
 });
 ```
 
