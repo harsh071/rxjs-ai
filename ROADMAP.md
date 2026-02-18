@@ -13,27 +13,27 @@ Get the current code published and documented. No new features — just make wha
 ### NPM & Repo Hygiene
 
 - [x] `0.1` — Write comprehensive README with API reference, examples, comparison table
-- [ ] `0.2` — Add `repository`, `homepage`, `bugs` fields to package.json
-- [ ] `0.3` — Add `author` field and finalize `keywords` for NPM discoverability
-- [ ] `0.4` — Add `.npmignore` or verify `files` field excludes test/demo/config
-- [ ] `0.5` — Add `engines` field (Node >=18) to package.json
-- [ ] `0.6` — Verify `npm pack` output is clean — no test files, no demo.ts, no tsconfig
+- [x] `0.2` — Add `repository`, `homepage`, `bugs` fields to package.json
+- [x] `0.3` — Add `author` field and finalize `keywords` for NPM discoverability
+- [x] `0.4` — Add `.npmignore` or verify `files` field excludes test/demo/config
+- [x] `0.5` — Add `engines` field (Node >=18) to package.json
+- [x] `0.6` — Verify `npm pack` output is clean — no test files, no demo.ts, no tsconfig
 
 ### CI & Quality
 
-- [ ] `0.7` — Add GitHub Actions workflow: typecheck + test on push/PR
-- [ ] `0.8` — Add GitHub Actions workflow: publish to NPM on tag/release
-- [ ] `0.9` — Add CONTRIBUTING.md with dev setup, testing, and PR guidelines
-- [ ] `0.10` — Add `vitest.config.ts` with coverage reporting
-- [ ] `0.11` — Reach 90%+ test coverage for existing code (createStore, createCommandBus, createAsyncController, createViewModel)
+- [x] `0.7` — Add GitHub Actions workflow: typecheck + test on push/PR
+- [x] `0.8` — Add GitHub Actions workflow: publish to NPM on tag/release
+- [x] `0.9` — Add CONTRIBUTING.md with dev setup, testing, and PR guidelines
+- [x] `0.10` — Add `vitest.config.ts` with coverage reporting
+- [x] `0.11` — Reach 90%+ test coverage for existing code (99.4% statements, 97.1% branches, 100% functions)
 
 ### Documentation Website
 
-- [ ] `0.12` — Scaffold docs site with Starlight (Astro) in `docs/` directory
-- [ ] `0.13` — Create landing page with value prop, install command, and quick start
-- [ ] `0.14` — Create "Getting Started" guide page
-- [ ] `0.15` — Create API reference pages for each existing primitive (createStore, createCommandBus, createAsyncController, createChatController, createViewModel, useObservableValue)
-- [ ] `0.16` — Create interactive example: basic chat with mock model
+- [x] `0.12` — Scaffold docs site with Starlight (Astro) in `docs/` directory
+- [x] `0.13` — Create landing page with value prop, install command, and quick start
+- [x] `0.14` — Create "Getting Started" guide page
+- [x] `0.15` — Create API reference pages for each existing primitive (createStore, createCommandBus, createAsyncController, createChatController, createViewModel, useObservableValue)
+- [x] `0.16` — Create interactive example: basic chat with mock model
 - [ ] `0.17` — Deploy docs site (Vercel / Netlify / GitHub Pages)
 
 ---
