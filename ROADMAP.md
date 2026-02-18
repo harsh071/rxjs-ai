@@ -44,37 +44,37 @@ Add the foundational `streamText` and `generateText` functions that make this a 
 
 ### LanguageModel Interface
 
-- [ ] `1.1` — Define `LanguageModel` interface with `doGenerate()` and `doStream()` methods
-- [ ] `1.2` — Define `LanguageModelRequest` type (messages, system, temperature, maxTokens, etc.)
-- [ ] `1.3` — Define `TextStreamEvent` union type (`text-delta`, `finish`, `error`)
-- [ ] `1.4` — Define `TextResult` type (text, usage, finishReason)
-- [ ] `1.5` — Define `Message` type with parts model (text, tool-call, tool-result) — richer than current `ChatMessage`
-- [ ] `1.6` — Write tests for all type contracts
+- [x] `1.1` — Define `LanguageModel` interface with `doGenerate()` and `doStream()` methods
+- [x] `1.2` — Define `LanguageModelRequest` type (messages, system, temperature, maxTokens, etc.)
+- [x] `1.3` — Define `TextStreamEvent` union type (`text-delta`, `finish`, `error`)
+- [x] `1.4` — Define `TextResult` type (text, usage, finishReason)
+- [x] `1.5` — Define `Message` type with parts model (text, tool-call, tool-result) — richer than current `ChatMessage`
+- [x] `1.6` — Write tests for all type contracts
 
 ### streamText()
 
-- [ ] `1.7` — Implement `streamText(options)` returning `Observable<TextStreamEvent>`
-- [ ] `1.8` — Add `.text$` helper — accumulated text as `Observable<string>`
-- [ ] `1.9` — Add `.delta$` helper — text deltas only as `Observable<string>`
-- [ ] `1.10` — Add `onFinish` callback option
-- [ ] `1.11` — Support `AbortSignal` passthrough for external cancellation
-- [ ] `1.12` — Write unit tests for streamText (happy path, error, cancellation)
+- [x] `1.7` — Implement `streamText(options)` returning `Observable<TextStreamEvent>`
+- [x] `1.8` — Add `.text$` helper — accumulated text as `Observable<string>`
+- [x] `1.9` — Add `.delta$` helper — text deltas only as `Observable<string>`
+- [x] `1.10` — Add `onFinish` callback option
+- [x] `1.11` — Support `AbortSignal` passthrough for external cancellation
+- [x] `1.12` — Write unit tests for streamText (happy path, error, cancellation)
 - [ ] `1.13` — Docs page: "Streaming Text" with code examples
-- [ ] `1.14` — Interactive example: streaming text with live token output
+- [x] `1.14` — Interactive example: streaming text with live token output
 
 ### generateText()
 
-- [ ] `1.15` — Implement `generateText(options)` returning `Observable<TextResult>`
-- [ ] `1.16` — Support same options as streamText (messages, system, temperature, etc.)
-- [ ] `1.17` — Write unit tests for generateText
+- [x] `1.15` — Implement `generateText(options)` returning `Observable<TextResult>`
+- [x] `1.16` — Support same options as streamText (messages, system, temperature, etc.)
+- [x] `1.17` — Write unit tests for generateText
 - [ ] `1.18` — Docs page: "Generating Text" with code examples
 
 ### Refactor createChatController
 
-- [ ] `1.19` — Refactor `createChatController` to use `streamText()` internally
-- [ ] `1.20` — Support passing `LanguageModel` instead of raw `ChatModelAdapter`
-- [ ] `1.21` — Maintain backwards compatibility with existing `ChatModelAdapter` interface
-- [ ] `1.22` — Update tests to verify both adapter paths work
+- [x] `1.19` — Refactor `createChatController` to use `streamText()` internally
+- [x] `1.20` — Support passing `LanguageModel` instead of raw `ChatModelAdapter`
+- [x] `1.21` — Maintain backwards compatibility with existing `ChatModelAdapter` interface
+- [x] `1.22` — Update tests to verify both adapter paths work
 
 ---
 

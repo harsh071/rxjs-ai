@@ -16,6 +16,7 @@
         <ul class="nav-list">
           <li><button class="nav-btn active" data-demo="chat">AI Chat</button></li>
           <li><button class="nav-btn" data-demo="stream-text">Stream Text</button></li>
+          <li><button class="nav-btn" data-demo="generate-text">Generate Text</button></li>
           <li><button class="nav-btn" data-demo="store">Reactive Store</button></li>
           <li><button class="nav-btn" data-demo="async">Async Controller</button></li>
           <li><button class="nav-btn" data-demo="commands">Command Bus</button></li>
@@ -87,6 +88,42 @@
             <div class="card" style="margin-top: 1rem;">
               <h3>stream$ (raw events)</h3>
               <div id="stream-events-output" class="event-log"><span class="text-muted">Stream events will appear here...</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Generate Text Demo -->
+        <section id="demo-generate-text" class="demo-panel">
+          <div class="demo-header">
+            <h2>Generate Text</h2>
+            <p>Non-streaming text generation with <code>generateText()</code>. Returns a complete <code>TextResult</code> with text, token usage, and finish reason — all in a single <code>Observable</code> emission.</p>
+          </div>
+          <div class="generate-text-container">
+            <div class="generate-status-bar">
+              <span class="status-indicator"></span>
+              <span id="generate-status-text">idle</span>
+            </div>
+            <form id="generate-text-form" class="chat-form">
+              <input id="generate-text-input" type="text" placeholder="Enter a prompt (try: hello, generate, observable, compare)..." autocomplete="off" />
+              <button type="submit" class="btn btn-primary">Generate</button>
+            </form>
+            <div class="chat-actions" style="margin-top: 0.5rem;">
+              <button id="btn-generate-cancel" class="btn btn-secondary" disabled>Cancel</button>
+              <button id="btn-generate-clear" class="btn btn-ghost">Clear</button>
+            </div>
+            <div class="store-cards" style="margin-top: 1rem;">
+              <div class="card">
+                <h3>Result</h3>
+                <div id="generate-result-output" class="generate-output"><span class="text-muted">Result will appear here...</span></div>
+              </div>
+              <div class="card">
+                <h3>Usage & Metadata</h3>
+                <div id="generate-usage-output" class="generate-output"><span class="text-muted">-</span></div>
+              </div>
+            </div>
+            <div class="card" style="margin-top: 1rem;">
+              <h3>History</h3>
+              <div id="generate-history-output" class="generate-history"><span class="text-muted">Previous results will appear here...</span></div>
             </div>
           </div>
         </section>
