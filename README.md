@@ -171,33 +171,69 @@ search.cancel();
 
 ### AI
 
-#### `createChatController(model, options?)`
+#### `streamText(options)`
 
-Manages a full chat session — message history, streaming, retry, and cancellation.
+Streams text from a `LanguageModel`. Returns `stream$` (raw events), `text$` (accumulated text), and `delta$` (individual chunks).
 
 ```ts
+import { streamText } from "rxjs-ai";
+
+const result = streamText({
+  model,
+  messages: [{ role: "user", content: [{ type: "text", text: "Explain RxJS." }] }],
+});
+
+// Accumulated text — updates as tokens arrive
+result.text$.subscribe((text) => console.log(text));
+
+// Individual deltas
+result.delta$.subscribe((chunk) => process.stdout.write(chunk));
+
+// Raw stream events (text-delta, finish, error)
+result.stream$.subscribe((event) => console.log(event.type));
+```
+
+| Property | Type | Description |
+|---|---|---|
+| `stream$` | `Observable<TextStreamEvent>` | Raw stream events |
+| `text$` | `Observable<string>` | Accumulated text |
+| `delta$` | `Observable<string>` | Individual text deltas |
+
+---
+
+#### `generateText(options)`
+
+Non-streaming text generation. Returns a single `TextResult` with text, token usage, and finish reason.
+
+```ts
+import { generateText } from "rxjs-ai";
+
+generateText({
+  model,
+  messages: [{ role: "user", content: [{ type: "text", text: "What is 2 + 2?" }] }],
+}).subscribe((result) => {
+  console.log(result.text);          // "4"
+  console.log(result.usage);         // { promptTokens, completionTokens, totalTokens }
+  console.log(result.finishReason);  // "stop"
+});
+```
+
+---
+
+#### `createChatController(model, options?)`
+
+Manages a full chat session — message history, streaming, retry, and cancellation. Accepts either a `LanguageModel` or a `ChatModelAdapter`.
+
+```ts
+import { of } from "rxjs";
 import { createChatController } from "rxjs-ai";
-import type { ChatModelAdapter } from "rxjs-ai";
-import { Observable } from "rxjs";
 
-const model: ChatModelAdapter = {
-  complete: ({ messages, signal }) =>
-    new Observable((subscriber) => {
-      const chunks = ["Hello", " there", "!"];
-      let i = 0;
-      const id = setInterval(() => {
-        if (signal.aborted) return clearInterval(id);
-        if (i >= chunks.length) {
-          clearInterval(id);
-          return subscriber.complete();
-        }
-        subscriber.next(chunks[i++]);
-      }, 100);
-      return () => clearInterval(id);
-    }),
-};
-
-const chat = createChatController(model);
+const chat = createChatController({
+  complete: ({ messages }) => {
+    const last = messages[messages.length - 1];
+    return of(`Echo: ${last?.content ?? ""}`);
+  },
+});
 
 // Observe individual streams
 chat.messages$.subscribe((msgs) => { /* message list updates */ });
@@ -217,17 +253,6 @@ chat.cancel();
 
 // Cleanup
 chat.destroy();
-```
-
-**ChatModelAdapter interface:**
-
-```ts
-interface ChatModelAdapter {
-  complete(request: {
-    messages: ChatMessage[];
-    signal: AbortSignal;
-  }): Observable<string | { content: string; done?: boolean }>;
-}
 ```
 
 | Property / Method | Type | Description |
@@ -303,7 +328,11 @@ import type {
   Store, StateUpdater, StatePatch,
   CommandBus, CommandMap, CommandEnvelope,
   AsyncController, AsyncState, AsyncStatus,
-  // AI
+  // AI — LanguageModel
+  LanguageModel, LanguageModelRequest, Message, MessagePart,
+  TextStreamEvent, TextDeltaEvent, FinishEvent, TextResult, TokenUsage, FinishReason,
+  StreamTextOptions, StreamTextResult, GenerateTextOptions,
+  // AI — Chat
   ChatController, ChatModelAdapter, ChatModelRequest,
   ChatMessage, ChatState, ChatStatus, ChatRole, ChatChunk,
 } from "rxjs-ai";
