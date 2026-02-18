@@ -1,0 +1,51 @@
+{
+  "name": "rxjs-ai",
+  "version": "0.1.0",
+  "description": "A pragmatic AI-oriented layer on top of RxJS for streams, app state, and UI integration.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/ui/react/index.d.ts",
+      "import": "./dist/ui/react/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "rxjs",
+    "ai",
+    "reactive",
+    "state-management",
+    "streams"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18",
+    "rxjs": "^7.8.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "rxjs": "^7.8.1",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
