@@ -34,6 +34,8 @@ export default defineConfig({
 				{
 					label: 'AI',
 					items: [
+						{ label: 'Streaming Text', slug: 'ai/stream-text' },
+						{ label: 'Generating Text', slug: 'ai/generate-text' },
 						{ label: 'Chat Controller', slug: 'ai/chat-controller' },
 						{ label: 'Model Adapters', slug: 'ai/model-adapters' },
 					],

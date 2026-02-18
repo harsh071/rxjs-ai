@@ -1,0 +1,199 @@
+---
+title: Streaming Text
+description: Stream text from any language model with full RxJS composition support.
+---
+
+## Overview
+
+`streamText` is the primary way to get streaming responses from a language model. It calls `model.doStream()` and returns three RxJS Observables — one for raw events, one for text deltas, and one for accumulated text — so you can subscribe to whichever level of detail your UI needs.
+
+```ts
+import { streamText } from "rxjs-ai";
+
+const result = streamText({
+  model: myModel,
+  messages: [{ role: "user", content: [{ type: "text", text: "Hello!" }] }],
+});
+
+result.text$.subscribe((text) => console.log(text));
+```
+
+## Basic usage
+
+```ts
+import { streamText, type LanguageModel, type Message } from "rxjs-ai";
+
+const messages: Message[] = [
+  { role: "user", content: [{ type: "text", text: "Explain RxJS in one paragraph." }] },
+];
+
+const result = streamText({ model, messages });
+
+// Option 1: accumulated text (most common for UI)
+result.text$.subscribe((text) => {
+  outputElement.textContent = text;
+});
+
+// Option 2: individual deltas (for token-by-token rendering)
+result.delta$.subscribe((delta) => {
+  outputElement.textContent += delta;
+});
+
+// Option 3: raw stream events (for full control)
+result.stream$.subscribe((event) => {
+  switch (event.type) {
+    case "text-delta":
+      console.log("Delta:", event.textDelta);
+      break;
+    case "finish":
+      console.log("Done:", event.finishReason, event.usage);
+      break;
+    case "error":
+      console.error("Error:", event.error);
+      break;
+  }
+});
+```
+
+## API reference
+
+### Arguments (`StreamTextOptions`)
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `model` | `LanguageModel` | **Required** | The language model to use. |
+| `messages` | `readonly Message[]` | **Required** | The conversation messages to send. |
+| `system` | `string` | `undefined` | System prompt prepended to the conversation. |
+| `temperature` | `number` | `undefined` | Sampling temperature (0–2). |
+| `maxTokens` | `number` | `undefined` | Maximum tokens to generate. |
+| `topP` | `number` | `undefined` | Nucleus sampling threshold. |
+| `topK` | `number` | `undefined` | Top-k sampling limit. |
+| `stopSequences` | `readonly string[]` | `undefined` | Sequences that stop generation. |
+| `signal` | `AbortSignal` | `undefined` | Signal for external cancellation. |
+| `onFinish` | `(result: TextResult) => void` | `undefined` | Callback invoked when the stream completes. |
+
+### Return value (`StreamTextResult`)
+
+| Property | Type | Description |
+|---|---|---|
+| `stream$` | `Observable<TextStreamEvent>` | Raw stream of all events (`text-delta`, `finish`, `error`). Shared across subscribers. |
+| `text$` | `Observable<string>` | Accumulated text. Each emission contains the full text so far. |
+| `delta$` | `Observable<string>` | Individual text chunks. Each emission is just the new piece. |
+
+All three Observables share a single upstream subscription via `share()`, so subscribing to multiple does not duplicate the model call.
+
+## Cancellation with AbortSignal
+
+```ts
+const controller = new AbortController();
+
+const result = streamText({
+  model,
+  messages,
+  signal: controller.signal,
+});
+
+result.text$.subscribe({
+  next: (text) => console.log(text),
+  error: (err) => {
+    if (err.name === "AbortError") {
+      console.log("Stream cancelled");
+    }
+  },
+});
+
+// Cancel after 2 seconds
+setTimeout(() => controller.abort(), 2000);
+```
+
+When the signal fires, all three Observables error with an `AbortError` and the underlying model stream is torn down immediately.
+
+## Using `onFinish`
+
+The `onFinish` callback is called once when the model completes successfully. It receives a `TextResult` with the final text, token usage, and finish reason.
+
+```ts
+const result = streamText({
+  model,
+  messages,
+  onFinish: (finalResult) => {
+    console.log("Text:", finalResult.text);
+    console.log("Tokens:", finalResult.usage.totalTokens);
+    console.log("Reason:", finalResult.finishReason);
+  },
+});
+
+result.delta$.subscribe(); // must subscribe to start the stream
+```
+
+## Composing with RxJS operators
+
+Because `streamText` returns standard Observables, you can use any RxJS operator:
+
+### Throttle UI updates
+
+```ts
+import { throttleTime } from "rxjs";
+
+result.text$
+  .pipe(throttleTime(100, undefined, { leading: true, trailing: true }))
+  .subscribe((text) => {
+    outputElement.textContent = text;
+  });
+```
+
+### Race two models
+
+```ts
+import { race } from "rxjs";
+
+const fast = streamText({ model: modelA, messages });
+const slow = streamText({ model: modelB, messages });
+
+race(fast.text$, slow.text$).subscribe((text) => {
+  outputElement.textContent = text;
+});
+```
+
+### Retry on error
+
+```ts
+import { retry } from "rxjs";
+
+result.stream$.pipe(retry(2)).subscribe({
+  next: (event) => console.log(event),
+  error: (err) => console.error("Failed after 3 attempts:", err),
+});
+```
+
+## Stream event types
+
+```ts
+type TextStreamEvent = TextDeltaEvent | FinishEvent | ErrorEvent;
+
+interface TextDeltaEvent {
+  readonly type: "text-delta";
+  readonly textDelta: string;
+}
+
+interface FinishEvent {
+  readonly type: "finish";
+  readonly text: string;
+  readonly usage: TokenUsage;
+  readonly finishReason: FinishReason;
+}
+
+interface ErrorEvent {
+  readonly type: "error";
+  readonly error: unknown;
+}
+```
+
+## streamText vs generateText
+
+| | `streamText` | `generateText` |
+|---|---|---|
+| **Returns** | `StreamTextResult` with `stream$`, `text$`, `delta$` | `Observable<TextResult>` |
+| **Emissions** | Multiple (one per token) | Single (complete response) |
+| **Best for** | Real-time UI, chat, live previews | Background tasks, data extraction, batch processing |
+| **Model method** | `doStream()` | `doGenerate()` |

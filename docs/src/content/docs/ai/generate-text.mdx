@@ -1,0 +1,172 @@
+---
+title: Generating Text
+description: Generate a complete text response from any language model as a single Observable emission.
+---
+
+## Overview
+
+`generateText` is the non-streaming counterpart to `streamText`. It calls `model.doGenerate()` and returns an `Observable<TextResult>` that emits a single complete response. Use it when you need the full answer at once — background processing, data extraction, classification, or any task where streaming to the UI is not needed.
+
+```ts
+import { generateText } from "rxjs-ai";
+
+generateText({
+  model: myModel,
+  messages: [{ role: "user", content: [{ type: "text", text: "Summarize this document." }] }],
+}).subscribe((result) => {
+  console.log(result.text);
+});
+```
+
+## Basic usage
+
+```ts
+import { generateText, type LanguageModel, type Message } from "rxjs-ai";
+
+const messages: Message[] = [
+  { role: "user", content: [{ type: "text", text: "What is 2 + 2?" }] },
+];
+
+generateText({ model, messages }).subscribe((result) => {
+  console.log("Text:", result.text);
+  console.log("Tokens used:", result.usage.totalTokens);
+  console.log("Finish reason:", result.finishReason);
+});
+```
+
+## API reference
+
+### Arguments (`GenerateTextOptions`)
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `model` | `LanguageModel` | **Required** | The language model to use. |
+| `messages` | `readonly Message[]` | **Required** | The conversation messages to send. |
+| `system` | `string` | `undefined` | System prompt prepended to the conversation. |
+| `temperature` | `number` | `undefined` | Sampling temperature (0–2). |
+| `maxTokens` | `number` | `undefined` | Maximum tokens to generate. |
+| `topP` | `number` | `undefined` | Nucleus sampling threshold. |
+| `topK` | `number` | `undefined` | Top-k sampling limit. |
+| `stopSequences` | `readonly string[]` | `undefined` | Sequences that stop generation. |
+| `signal` | `AbortSignal` | `undefined` | Signal for external cancellation. |
+
+### Return value
+
+`Observable<TextResult>` — emits a single value and completes.
+
+### TextResult
+
+| Property | Type | Description |
+|---|---|---|
+| `text` | `string` | The complete generated text. |
+| `usage` | `TokenUsage` | Token counts (prompt, completion, total). |
+| `finishReason` | `FinishReason` | Why generation stopped: `"stop"`, `"length"`, `"tool-calls"`, `"error"`, or `"unknown"`. |
+| `messages` | `readonly Message[]` | The conversation including the assistant's response. |
+
+## Cancellation with AbortSignal
+
+```ts
+const controller = new AbortController();
+
+generateText({
+  model,
+  messages,
+  signal: controller.signal,
+}).subscribe({
+  next: (result) => console.log(result.text),
+  error: (err) => {
+    if (err.name === "AbortError") {
+      console.log("Request cancelled");
+    }
+  },
+});
+
+// Cancel if it takes too long
+setTimeout(() => controller.abort(), 5000);
+```
+
+## Composing with RxJS operators
+
+Because `generateText` returns a standard Observable, all RxJS operators work naturally.
+
+### Retry on failure
+
+```ts
+import { retry } from "rxjs";
+
+generateText({ model, messages })
+  .pipe(retry(2))
+  .subscribe({
+    next: (result) => console.log(result.text),
+    error: (err) => console.error("Failed after 3 attempts:", err),
+  });
+```
+
+### Map and transform the result
+
+```ts
+import { map } from "rxjs";
+
+generateText({ model, messages })
+  .pipe(map((result) => result.text.toUpperCase()))
+  .subscribe((uppercased) => console.log(uppercased));
+```
+
+### Fallback to another model
+
+```ts
+import { catchError } from "rxjs";
+
+generateText({ model: primaryModel, messages }).pipe(
+  catchError(() => generateText({ model: fallbackModel, messages })),
+).subscribe((result) => {
+  console.log(result.text);
+});
+```
+
+### Sequential processing with switchMap
+
+```ts
+import { from, switchMap } from "rxjs";
+
+const prompts = ["Summarize chapter 1", "Summarize chapter 2", "Summarize chapter 3"];
+
+from(prompts).pipe(
+  switchMap((prompt) =>
+    generateText({
+      model,
+      messages: [{ role: "user", content: [{ type: "text", text: prompt }] }],
+    }),
+  ),
+).subscribe((result) => {
+  console.log(result.text);
+});
+```
+
+## Types
+
+```ts
+interface TextResult {
+  readonly text: string;
+  readonly usage: TokenUsage;
+  readonly finishReason: FinishReason;
+  readonly messages: readonly Message[];
+}
+
+interface TokenUsage {
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+}
+
+type FinishReason = "stop" | "length" | "tool-calls" | "error" | "unknown";
+```
+
+## generateText vs streamText
+
+| | `generateText` | `streamText` |
+|---|---|---|
+| **Returns** | `Observable<TextResult>` | `StreamTextResult` with `stream$`, `text$`, `delta$` |
+| **Emissions** | Single (complete response) | Multiple (one per token) |
+| **Best for** | Background tasks, data extraction, batch processing | Real-time UI, chat, live previews |
+| **Model method** | `doGenerate()` | `doStream()` |

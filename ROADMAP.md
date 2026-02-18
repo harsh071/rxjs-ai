@@ -59,7 +59,7 @@ Add the foundational `streamText` and `generateText` functions that make this a 
 - [x] `1.10` — Add `onFinish` callback option
 - [x] `1.11` — Support `AbortSignal` passthrough for external cancellation
 - [x] `1.12` — Write unit tests for streamText (happy path, error, cancellation)
-- [ ] `1.13` — Docs page: "Streaming Text" with code examples
+- [x] `1.13` — Docs page: "Streaming Text" with code examples
 - [x] `1.14` — Interactive example: streaming text with live token output
 
 ### generateText()
@@ -67,7 +67,7 @@ Add the foundational `streamText` and `generateText` functions that make this a 
 - [x] `1.15` — Implement `generateText(options)` returning `Observable<TextResult>`
 - [x] `1.16` — Support same options as streamText (messages, system, temperature, etc.)
 - [x] `1.17` — Write unit tests for generateText
-- [ ] `1.18` — Docs page: "Generating Text" with code examples
+- [x] `1.18` — Docs page: "Generating Text" with code examples
 
 ### Refactor createChatController
 
