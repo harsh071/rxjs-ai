@@ -36,17 +36,15 @@ npm install rxjs-ai rxjs
 ## Quick Start
 
 ```ts
+import { of } from "rxjs";
 import { createChatController } from "rxjs-ai";
-import { Observable } from "rxjs";
 
 // 1. Define a model adapter (plug in any LLM)
 const model = {
-  complete: ({ messages, signal }) =>
-    new Observable((subscriber) => {
-      const last = messages[messages.length - 1];
-      subscriber.next(`Echo: ${last?.content ?? ""}`);
-      subscriber.complete();
-    }),
+  complete: ({ messages }) => {
+    const last = messages[messages.length - 1];
+    return of(`Echo: ${last?.content ?? ""}`);
+  },
 };
 
 // 2. Create the controller
